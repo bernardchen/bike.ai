@@ -1,0 +1,149 @@
+// Analog accelerometer app
+//
+// Reads data from the ADXL327 analog accelerometer
+
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <math.h>
+
+#include "app_error.h"
+#include "nrf.h"
+#include "nrf_delay.h"
+#include "nrf_gpio.h"
+#include "nrf_log.h"
+#include "nrf_log_ctrl.h"
+#include "nrf_log_default_backends.h"
+#include "nrf_pwr_mgmt.h"
+#include "nrf_serial.h"
+#include "nrfx_gpiote.h"
+#include "nrfx_saadc.h"
+
+#include "buckler.h"
+
+#include "display.h"
+
+#define pi acos(-1.0)
+#define radToDeg (180.0 / pi)
+
+// ADC channels
+#define X_CHANNEL 0
+#define Y_CHANNEL 1
+#define Z_CHANNEL 2
+
+// callback for SAADC events
+void saadc_callback (nrfx_saadc_evt_t const * p_event) {
+  // don't care about adc callbacks
+}
+
+// sample a particular analog channel in blocking mode
+nrf_saadc_value_t sample_value (uint8_t channel) {
+  nrf_saadc_value_t val;
+  ret_code_t error_code = nrfx_saadc_sample_convert(channel, &val);
+  APP_ERROR_CHECK(error_code);
+  return val;
+}
+
+int main (void) {
+  ret_code_t error_code = NRF_SUCCESS;
+
+  // initialize RTT library
+  error_code = NRF_LOG_INIT(NULL);
+  APP_ERROR_CHECK(error_code);
+  NRF_LOG_DEFAULT_BACKENDS_INIT();
+
+  // initialize analog to digital converter
+  nrfx_saadc_config_t saadc_config = NRFX_SAADC_DEFAULT_CONFIG;
+  saadc_config.resolution = NRF_SAADC_RESOLUTION_12BIT;
+  error_code = nrfx_saadc_init(&saadc_config, saadc_callback);
+  APP_ERROR_CHECK(error_code);
+
+  // initialize analog inputs
+  // configure with 0 as input pin for now
+  nrf_saadc_channel_config_t channel_config = NRFX_SAADC_DEFAULT_CHANNEL_CONFIG_SE(0);
+  channel_config.gain = NRF_SAADC_GAIN1_6; // input gain of 1/6 Volts/Volt, multiply incoming signal by (1/6)
+  channel_config.reference = NRF_SAADC_REFERENCE_INTERNAL; // 0.6 Volt reference, input after gain can be 0 to 0.6 Volts
+
+  // specify input pin and initialize that ADC channel
+  channel_config.pin_p = BUCKLER_ANALOG_ACCEL_X;
+  error_code = nrfx_saadc_channel_init(X_CHANNEL, &channel_config);
+  APP_ERROR_CHECK(error_code);
+
+  // specify input pin and initialize that ADC channel
+  channel_config.pin_p = BUCKLER_ANALOG_ACCEL_Y;
+  error_code = nrfx_saadc_channel_init(Y_CHANNEL, &channel_config);
+  APP_ERROR_CHECK(error_code);
+
+  // specify input pin and initialize that ADC channel
+  channel_config.pin_p = BUCKLER_ANALOG_ACCEL_Z;
+  error_code = nrfx_saadc_channel_init(Z_CHANNEL, &channel_config);
+  APP_ERROR_CHECK(error_code);
+
+  // initialization complete
+  printf("Buckler initialized!\n");
+
+  double system_bias = 2.885 / 3.0;
+  double lsb_size = (0.6 * 6) / 4096;
+  double slope = .420 * system_bias;
+  double bias = -1.5 * system_bias;
+  // loop forever
+  
+  // init display
+  nrf_drv_spi_t spi_instance = NRF_DRV_SPI_INSTANCE(1);
+  nrf_drv_spi_config_t spi_config = {
+    .sck_pin = BUCKLER_LCD_SCLK,
+    .mosi_pin = BUCKLER_LCD_MOSI,
+    .miso_pin = BUCKLER_LCD_MISO,
+    .ss_pin = BUCKLER_LCD_CS,
+    .irq_priority = NRFX_SPI_DEFAULT_CONFIG_IRQ_PRIORITY,
+    .orc = 0,
+    .frequency = NRF_DRV_SPI_FREQ_4M,
+    .mode = NRF_DRV_SPI_MODE_2,
+    .bit_order = NRF_DRV_SPI_BIT_ORDER_MSB_FIRST
+  };
+  error_code = nrf_drv_spi_init(&spi_instance, &spi_config, NULL, NULL);
+  APP_ERROR_CHECK(error_code);
+  display_init(&spi_instance);
+  display_write("Hello, Human!", DISPLAY_LINE_0);
+  printf("Display initialized!\n");
+
+  //init SD card logging
+  /*printf("trying to init logger\n");
+  simple_logger_init("test1.txt", "a");
+  printf("logger inited\n");
+  simple_logger_power_on();  
+  printf("logger powered on\n");*/
+
+  display_write("no", 1);
+  while (1) {
+    // sample analog inputs
+    nrf_saadc_value_t x_val = sample_value(X_CHANNEL);
+    nrf_saadc_value_t y_val = sample_value(Y_CHANNEL);
+    nrf_saadc_value_t z_val = sample_value(Z_CHANNEL);
+
+    double x_acc = (x_val * lsb_size + bias) / slope;
+    double y_acc = (y_val * lsb_size + bias) / slope;
+    double z_acc = (z_val * lsb_size + bias) / slope;
+
+    double theta = atan(x_acc / pow(pow(y_acc, 2) + pow(z_acc, 2), 0.5)) * radToDeg;
+    double psi = atan(y_acc / pow(pow(x_acc, 2) + pow(z_acc, 2), 0.5)) * radToDeg;
+    double phi = atan(z_acc / pow(pow(y_acc, 2) + pow(x_acc, 2), 0.5)) * radToDeg;
+
+
+    // display results
+    printf("x: %lfg\ty: %lfg\tz:%lfg\n", x_acc, y_acc, z_acc);
+    char buf[16] = {0};
+    snprintf(buf, 16, "%lf", x_acc);
+    display_write(buf, 0);
+    if (x_acc < -0.2) {
+        display_write("above", 1);
+    }
+    // log to SD card
+    /*//simple_logger_update();
+    simple_logger_log("test\n");*/
+    //printf("x: %lfdeg\ty: %lfdeg\tz:%lfdeg\n", theta, psi, phi);
+    nrf_delay_ms(100);
+  }
+}
+
+
