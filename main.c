@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <math.h>
+#include <time.h>
 
 #include "app_error.h"
 #include "nrf.h"
@@ -88,6 +89,34 @@ int main (void) {
   double bias = -1.5 * system_bias;
   // loop forever
   
+// SD CARD INIT --------------------
+  // Enable SoftDevice (used to get RTC running)
+  nrf_sdh_enable_request();
+
+  // Initialize GPIO driver
+  if (!nrfx_gpiote_is_init()) {
+    error_code = nrfx_gpiote_init();
+  }
+  APP_ERROR_CHECK(error_code);
+
+  // Configure GPIOs
+  nrf_gpio_cfg_output(BUCKLER_SD_ENABLE);
+  nrf_gpio_cfg_output(BUCKLER_SD_CS);
+  nrf_gpio_cfg_output(BUCKLER_SD_MOSI);
+  nrf_gpio_cfg_output(BUCKLER_SD_SCLK);
+  nrf_gpio_cfg_input(BUCKLER_SD_MISO, NRF_GPIO_PIN_NOPULL);
+
+  nrf_gpio_pin_set(BUCKLER_SD_ENABLE);
+  nrf_gpio_pin_set(BUCKLER_SD_CS);
+
+  // Initialize SD card
+  const char filename[] = "testfile.log";
+
+  const char permissions[] = "a"; // w = write, a = append
+
+  // Start file
+  simple_logger_init(filename, permissions);
+
   // init display
   nrf_drv_spi_t spi_instance = NRF_DRV_SPI_INSTANCE(1);
   nrf_drv_spi_config_t spi_config = {
@@ -107,14 +136,12 @@ int main (void) {
   display_write("Hello, Human!", DISPLAY_LINE_0);
   printf("Display initialized!\n");
 
-  //init SD card logging
-  /*printf("trying to init logger\n");
-  simple_logger_init("test1.txt", "a");
-  printf("logger inited\n");
-  simple_logger_power_on();  
-  printf("logger powered on\n");*/
+  time_t rawtime;
+  struct tm *timeinfo;
+  time(&rawtime);
+  timeinfo = localtime(&rawtime);
+  simple_logger_log("STARTING RUN AT TIME %s ----------\n", asctime(timeinfo));
 
-  display_write("no", 1);
   while (1) {
     // sample analog inputs
     nrf_saadc_value_t x_val = sample_value(X_CHANNEL);
@@ -131,18 +158,22 @@ int main (void) {
 
 
     // display results
-    printf("x: %lfg\ty: %lfg\tz:%lfg\n", x_acc, y_acc, z_acc);
-    char buf[16] = {0};
-    snprintf(buf, 16, "%lf", x_acc);
-    display_write(buf, 0);
-    if (x_acc < -0.2) {
-        display_write("above", 1);
-    }
+    printf("x: %.5fg\ty: %.5fg\tz:%.5fg\n", x_acc, y_acc, z_acc);
+    //char buf[16] = {0};
+    //snprintf(buf, 16, "%lf", x_acc);
+    //display_write(buf, 0);
+
     // log to SD card
-    /*//simple_logger_update();
-    simple_logger_log("test\n");*/
+    char x_buf[10];
+    char y_buf[10];
+    char z_buf[10];
+    gcvt(x_acc, 10, x_buf);
+    gcvt(y_acc, 10, y_buf);
+    gcvt(z_acc, 10, z_buf);
+    simple_logger_log("x:%.10sg, y: %.10sg, z: %.10sg\n", x_buf, y_buf, z_buf);
+    printf("Wrote line to SD card\n");
     //printf("x: %lfdeg\ty: %lfdeg\tz:%lfdeg\n", theta, psi, phi);
-    nrf_delay_ms(100);
+    nrf_delay_ms(50);
   }
 }
 
