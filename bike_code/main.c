@@ -1,6 +1,5 @@
-// Analog accelerometer app
-//
-// Reads data from the ADXL327 analog accelerometer
+// Non-intrusive bicycle lighting system
+// includes brake, turn, and blind-spot lighting
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -133,7 +132,7 @@ int main (void) {
   error_code = nrf_drv_spi_init(&spi_instance, &spi_config, NULL, NULL);
   APP_ERROR_CHECK(error_code);
   display_init(&spi_instance);
-  display_write("Hello, Human!", DISPLAY_LINE_0);
+  display_write("Logging to SD", DISPLAY_LINE_0);
   printf("Display initialized!\n");
 
   time_t rawtime;
