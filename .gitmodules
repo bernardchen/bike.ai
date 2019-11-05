@@ -2,3 +2,7 @@
 	path = nrf52x-base
 	url = https://github.com/lab11/nrf52x-base.git
 	branch = master
+[submodule "nrf52x-base"]
+	path = nrf52x-base
+	url = https://github.com/lab11/nrf52x-base.git
+	branch = master
