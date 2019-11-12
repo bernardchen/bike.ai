@@ -146,16 +146,18 @@ int main (void) {
 
     uint32_t left_sensed = nrf_gpio_pin_read(BUCKLER_GROVE_A0); 
     uint32_t left_othersensed = nrf_gpio_pin_read(BUCKLER_GROVE_A1);
-    for (int i = 0; i < 20; i++)
+    for (int i = 0; i < 40; i++)
     {
-      printf("A0: %x, A1: %x, D0: %x, D1: %x\n\n",
+      printf("i: %d, A0: %x, A1: %x, D0: %x, D1: %x\n",
+        i,
         nrf_gpio_pin_read(BUCKLER_GROVE_A0),
         nrf_gpio_pin_read(BUCKLER_GROVE_A1),
         nrf_gpio_pin_read(BUCKLER_GROVE_D0),
         nrf_gpio_pin_read(BUCKLER_GROVE_D1));
+      nrf_delay_ms(1);
     }
     
-    printf("End input read\n\n");
+    printf("\nEnd input read\n\n");
 
     //printf("pin3: %x pin4: %x",left_sensed,left_othersensed);
     // display results
