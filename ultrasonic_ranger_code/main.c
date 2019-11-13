@@ -21,6 +21,8 @@
 
 #include "buckler.h"
 
+#include "ultrasonic_ranger.h"
+
 #include "display.h"
 #define PIR_MOTION_SENSOR 2 
 #define pi acos(-1.0)
@@ -51,10 +53,10 @@ int main (void) {
   error_code = NRF_LOG_INIT(NULL);
   APP_ERROR_CHECK(error_code);
   NRF_LOG_DEFAULT_BACKENDS_INIT();
-  nrf_gpio_cfg_input(BUCKLER_GROVE_A1,NRF_GPIO_PIN_NOPULL);
-  nrf_gpio_cfg_input(BUCKLER_GROVE_A0,NRF_GPIO_PIN_NOPULL);
-  nrf_gpio_cfg_input(BUCKLER_GROVE_D0, NRF_GPIO_PIN_NOPULL);
-  nrf_gpio_cfg_input(BUCKLER_GROVE_D1, NRF_GPIO_PIN_NOPULL);
+  // nrf_gpio_cfg_input(BUCKLER_GROVE_A1,NRF_GPIO_PIN_NOPULL);
+  // nrf_gpio_cfg_input(BUCKLER_GROVE_A0,NRF_GPIO_PIN_NOPULL);
+  // nrf_gpio_cfg_input(BUCKLER_GROVE_D0, NRF_GPIO_PIN_NOPULL);
+  // nrf_gpio_cfg_input(BUCKLER_GROVE_D1, NRF_GPIO_PIN_NOPULL);
   // initialize analog to digital converter
   nrfx_saadc_config_t saadc_config = NRFX_SAADC_DEFAULT_CONFIG;
   saadc_config.resolution = NRF_SAADC_RESOLUTION_12BIT;
@@ -81,6 +83,8 @@ int main (void) {
   channel_config.pin_p = BUCKLER_ANALOG_ACCEL_Z;
   error_code = nrfx_saadc_channel_init(Z_CHANNEL, &channel_config);
   APP_ERROR_CHECK(error_code);
+
+  init_ultrasonic_ranger(D);
 
   // initialization complete
   printf("Buckler initialized!\n");
@@ -132,6 +136,11 @@ int main (void) {
     double psi = atan(y_acc / pow(pow(x_acc, 2) + pow(z_acc, 2), 0.5)) * radToDeg;
     double phi = atan(z_acc / pow(pow(y_acc, 2) + pow(x_acc, 2), 0.5)) * radToDeg;
 
+    long range = ultrasonic_ranger_loop_call();
+    printf("Range: %ld\n", range);
+
+    /******** ORIGINAL ULTRASONIC TESTING **********/
+    /*
     printf("SEND OUT SOUND\n");
     nrf_gpio_cfg_output(BUCKLER_GROVE_D0);
     nrf_gpio_pin_clear(BUCKLER_GROVE_D0);
@@ -158,17 +167,19 @@ int main (void) {
     }
     
     printf("\nEnd input read\n\n");
+    */
 
     //printf("pin3: %x pin4: %x",left_sensed,left_othersensed);
     // display results
     //printf("x: %lfg\ty: %lfg\tz:%lfg\n", x_acc, y_acc, z_acc);
-    char buf[16] = {0};
-    snprintf(buf, 16, "%lf", x_acc);
-    display_write(buf, 0);
-    if (left_sensed || left_othersensed) {
-        display_write("Object Detected", 1);
-    }
-    nrf_delay_ms(2000);
+
+    // char buf[16] = {0};
+    // snprintf(buf, 16, "%lf", x_acc);
+    // display_write(buf, 0);
+    // if (left_sensed || left_othersensed) {
+    //     display_write("Object Detected", 1);
+    // }
+    nrf_delay_ms(1000);
   }
 }
 
