@@ -39,7 +39,7 @@
 #define Z_CHANNEL 2
 
 // Bucker LED array
-static uint8_t LEDS[4] = {BUCKLER_LED0, BUCKLER_LED1, BUCKLER_LED2, BUCKLER_GROVE_A1};
+static uint8_t LEDS[3] = {BUCKLER_LED0, BUCKLER_LED1, BUCKLER_LED2};
 
 // callback for SAADC events
 void saadc_callback (nrfx_saadc_evt_t const * p_event) {
@@ -165,7 +165,7 @@ void init_buckler_LEDs() {
   // configure leds
   // manually-controlled (simple) output, initially set
   nrfx_gpiote_out_config_t out_config = NRFX_GPIOTE_CONFIG_OUT_SIMPLE(true);
-  for (int i=0; i<4; i++) {
+  for (int i=0; i<3; i++) {
     error_code = nrfx_gpiote_out_init(LEDS[i], &out_config);
     APP_ERROR_CHECK(error_code);
   }
@@ -186,25 +186,42 @@ void sample_accel(double* x_acc, double* y_acc, double* z_acc) {
   //double phi = atan(z_acc / pow(pow(y_acc, 2) + pow(x_acc, 2), 0.5)) * radToDeg;
 }
 
-int main (void) {
+typedef enum {
+  ON,
+  OFF
+} on_off_state_t;
 
+typedef enum {
+  RIGHT,
+  LEFT,
+  OFF
+} turning_state_t;
+
+int main (void) {
+  // Initialization code
   init_RTT();
   init_accelerometer();
-  init_SD_logging("testfile.log", "a");
-  init_display("Logging mode");
   init_buckler_LEDs();
   printf("Buckler initialized!\n");
 
+  /*
   simple_logger_log("----- STARTING RUN -----\n");
+  init_SD_logging("testfile.log", "a");
+  init_display("Logging...");
+  */
+
+  on_off_state_t brake_state = OFF;
+  on_off_state_t proximity_state = OFF;
+  turning_state_t turn_state = OFF;
 
   // Loop forever
   while (1) {
     // sample analog inputs
-    double x_acc, y_acc, z_acc;
-    sample_accel(&x_acc, &y_acc, &z_acc);
+    //double x_acc, y_acc, z_acc;
+    //sample_accel(&x_acc, &y_acc, &z_acc);
 
     // display results
-    printf("x: %.5fg\ty: %.5fg\tz:%.5fg\n", x_acc, y_acc, z_acc);
+    //printf("x: %.5fg\ty: %.5fg\tz:%.5fg\n", x_acc, y_acc, z_acc);
     //char buf[16] = {0};
     //snprintf(buf, 16, "%lf", x_acc);
     //display_write(buf, 0);
@@ -220,12 +237,43 @@ int main (void) {
     simple_logger_log("x:%.10sg, y: %.10sg, z: %.10sg\n", x_buf, y_buf, z_buf);
     printf("Wrote line to SD card\n");*/
 
-    for (int i=0; i<4; i++) {
+    for (int i=0; i<3; i++) {
       nrf_gpio_pin_toggle(LEDS[i]);
     }
 
     // Determines sampling rate
-    nrf_delay_ms(5);
+    nrf_delay_ms(1000);
+  
+    // STATE MACHINES
+    // State machine for brake
+    switch(brake_state) {
+      case OFF: {
+        break;
+      }
+      case ON: {
+        break;
+      }
+    }
+    
+    // State machine for proximity sensors
+    switch(proximity_state) {
+      case OFF: {
+        break;
+      }
+      case ON: {
+        break;
+      }
+    }
+    
+    // State machine for turn indicators
+    switch(turn_state) {
+      case OFF: {
+        break;
+      }
+      case ON: {
+        break;
+      }
+    }
   }
 }
 
