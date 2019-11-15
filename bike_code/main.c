@@ -187,15 +187,11 @@ void sample_accel(double* x_acc, double* y_acc, double* z_acc) {
 }
 
 typedef enum {
-  ON,
-  OFF
-} on_off_state_t;
-
-typedef enum {
   RIGHT,
   LEFT,
-  OFF
-} turning_state_t;
+  OFF,
+  ON
+} on_off_state_t;
 
 int main (void) {
   // Initialization code
@@ -212,7 +208,7 @@ int main (void) {
 
   on_off_state_t brake_state = OFF;
   on_off_state_t proximity_state = OFF;
-  turning_state_t turn_state = OFF;
+  on_off_state_t turn_state = OFF;
 
   // Loop forever
   while (1) {
