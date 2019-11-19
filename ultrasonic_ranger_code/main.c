@@ -136,11 +136,11 @@ int main (void) {
     double psi = atan(y_acc / pow(pow(x_acc, 2) + pow(z_acc, 2), 0.5)) * radToDeg;
     double phi = atan(z_acc / pow(pow(y_acc, 2) + pow(x_acc, 2), 0.5)) * radToDeg;
 
-    long range = ultrasonic_ranger_loop_call();
-    printf("Range: %ld\n", range);
+    // long range = ultrasonic_ranger_loop_call();
+    // printf("Range: %ld\n", range);
 
     /******** ORIGINAL ULTRASONIC TESTING **********/
-    /*
+    
     printf("SEND OUT SOUND\n");
     nrf_gpio_cfg_output(BUCKLER_GROVE_D0);
     nrf_gpio_pin_clear(BUCKLER_GROVE_D0);
@@ -153,21 +153,21 @@ int main (void) {
 
     nrf_gpio_cfg_input(BUCKLER_GROVE_D0, NRF_GPIO_PIN_NOPULL);
 
-    uint32_t left_sensed = nrf_gpio_pin_read(BUCKLER_GROVE_A0); 
-    uint32_t left_othersensed = nrf_gpio_pin_read(BUCKLER_GROVE_A1);
+    // uint32_t left_sensed = nrf_gpio_pin_read(BUCKLER_GROVE_A0); 
+    // uint32_t left_othersensed = nrf_gpio_pin_read(BUCKLER_GROVE_A1);
     for (int i = 0; i < 40; i++)
     {
-      printf("i: %d, A0: %x, A1: %x, D0: %x, D1: %x\n",
+      printf("Elapsed time (millisec): %2d, D: %x\n", //0: %x, A1: %x, D0: %x, D1: %x\n",
         i,
-        nrf_gpio_pin_read(BUCKLER_GROVE_A0),
-        nrf_gpio_pin_read(BUCKLER_GROVE_A1),
-        nrf_gpio_pin_read(BUCKLER_GROVE_D0),
-        nrf_gpio_pin_read(BUCKLER_GROVE_D1));
+        // nrf_gpio_pin_read(BUCKLER_GROVE_A0),
+        // nrf_gpio_pin_read(BUCKLER_GROVE_A1),
+        nrf_gpio_pin_read(BUCKLER_GROVE_D0)); //,
+        // nrf_gpio_pin_read(BUCKLER_GROVE_D1));
       nrf_delay_ms(1);
     }
     
     printf("\nEnd input read\n\n");
-    */
+    
 
     //printf("pin3: %x pin4: %x",left_sensed,left_othersensed);
     // display results
