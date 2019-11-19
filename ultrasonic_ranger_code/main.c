@@ -136,11 +136,11 @@ int main (void) {
     double psi = atan(y_acc / pow(pow(x_acc, 2) + pow(z_acc, 2), 0.5)) * radToDeg;
     double phi = atan(z_acc / pow(pow(y_acc, 2) + pow(x_acc, 2), 0.5)) * radToDeg;
 
-    // long range = ultrasonic_ranger_loop_call();
-    // printf("Range: %ld\n", range);
+    long range = ultrasonic_ranger_loop_call();
+    printf("Range: %ld\n", range);
 
     /******** ORIGINAL ULTRASONIC TESTING **********/
-    
+    /*
     printf("SEND OUT SOUND\n");
     nrf_gpio_cfg_output(BUCKLER_GROVE_D0);
     nrf_gpio_pin_clear(BUCKLER_GROVE_D0);
@@ -167,7 +167,7 @@ int main (void) {
     }
     
     printf("\nEnd input read\n\n");
-    
+    */
 
     //printf("pin3: %x pin4: %x",left_sensed,left_othersensed);
     // display results
