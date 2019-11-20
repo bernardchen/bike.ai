@@ -1,0 +1,18 @@
+NOTES
+
+11/1:
+Worked on implementing state machine for turn signals. Working as of now (with
+left turn ble button press being simulated with button0 on buckler). Pressing
+the button transitions state to left and doing either button0 or tilt_left or
+leaving it for 60 seconds makes it turn off.
+
+Also sampling acceleration from mpu9250 instead of from the analog adxl327.
+
+Also ordered hall-effect sensors for next time. Need to calculate velocity
+(because we can't accurately get velocity from acceleration)
+
+Problems:
+Investigate why app_timer_init() stuff needs ble to be initialized?
+Look into getting an LED matrix panel and hooking that up.
+Abstract out methods even further (into their own .h and .c files)
+Implement velocity readings from hall-effect sensors.

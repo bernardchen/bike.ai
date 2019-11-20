@@ -25,6 +25,7 @@
 #include "buckler.h"
 #include "display.h"
 #include "mpu9250.h"
+#include "simple_ble.h"
 
 // our includes
 #include "gpio.h"
@@ -48,6 +49,17 @@ APP_TIMER_DEF(adv_timer);
 // I2C manager
 NRF_TWI_MNGR_DEF(twi_mngr_instance, 5, 0);
 
+// Intervals for advertising and connections
+static simple_ble_config_t ble_config = {
+        // c0:98:e5:49:xx:xx
+        .platform_id       = 0x49,    // used as 4th octect in device BLE address
+        .device_id         = 0x0000,  // TODO: replace with your lab bench number
+        .adv_name          = "EE149", // Note that this name is not displayed to save room in the advertisement for data.
+        .adv_interval      = MSEC_TO_UNITS(1000, UNIT_0_625_MS),
+        .min_conn_interval = MSEC_TO_UNITS(500, UNIT_1_25_MS),
+        .max_conn_interval = MSEC_TO_UNITS(1000, UNIT_1_25_MS),
+};
+
 // Bucker LED array
 static uint8_t LEDS[3] = {BUCKLER_LED0, BUCKLER_LED1, BUCKLER_LED2};
 
@@ -64,7 +76,7 @@ nrf_saadc_value_t sample_value (uint8_t channel) {
   return val;
 }
 
-// BUCKER INITIALIZATION CODE
+// BUCKER/nRF INITIALIZATION CODE
 
 void init_RTT() {
   ret_code_t error_code = NRF_SUCCESS;
@@ -205,16 +217,21 @@ void init_button0() {
 // turn_time_on used for turn signal state machine
 uint32_t turn_time_on = 0;
 uint32_t button_press_time = 0;
-void timer_callback() {
-  printf("Timer fired\n");
+void our_timer_callback() {
   turn_time_on++;
   button_press_time++;
 }
 
+void init_ble() {
+  // Setup BLE
+  simple_ble_app_t* simple_ble_app = simple_ble_init(&ble_config);
+}
+
 void init_app_timer() {
   app_timer_init();
-  app_timer_create(&adv_timer, APP_TIMER_MODE_REPEATED, (app_timer_timeout_handler_t) timer_callback);
+  app_timer_create(&adv_timer, APP_TIMER_MODE_REPEATED, (app_timer_timeout_handler_t) our_timer_callback);
   app_timer_start(adv_timer, APP_TIMER_TICKS(1000), NULL); // 1000 milliseconds
+  printf("Timer initialized\n");
 }
 
 void sample_accel(double* x_acc, double* y_acc, double* z_acc) {
@@ -252,6 +269,7 @@ int main (void) {
   init_accelerometer();
   init_mpu9250();
   init_buckler_LEDs();
+  init_ble();
   init_app_timer();
   init_button0();
   printf("Buckler initialized!\n");
@@ -277,20 +295,20 @@ int main (void) {
     float x_acc, y_acc, z_acc;
     sample_9250_accelerometer(&x_acc, &y_acc, &z_acc);
     // TODO: set threshold as macro
-    bool turned_left = (y_acc > 0.3), turned_right = (y_acc < -0.3);
+    bool turned_left = (y_acc > 0.4), turned_right = (y_acc < -0.4);
     // Temporary debugging for turn signal debugging (button press instead of ble button)
-    bool ble_left;
-    if (button_press_time > 0) {
-      ble_left = !gpio_read(28);
+    bool ble_left = false;
+    if (button_press_time > 0 && !gpio_read(28)) {
+      ble_left = true;
       button_press_time = 0;
     }
-    printf("timer: %i\n", button_press_time);
+    //printf("timer: %i\n", button_press_time);
     bool ble_right = false;
     bool left_turn, right_turn = false;
 
     // TODO: Implement hall-effect sensors to update velocity
     // Used to check left_turn and right_turn (i.e. tilted left/right && velocity > 0);
-    //printf("X: %f, Y: %f, Z: %f\n", x_acc, y_acc, z_acc);
+    printf("X: %f, Y: %f, Z: %f\n", x_acc, y_acc, z_acc);
     //velocity = velocity + x_acc * 0.01;
     //printf("Velocity: %f\n", velocity);
 
@@ -321,9 +339,11 @@ int main (void) {
         if (ble_left) {
           turn_state = LEFT;
           left_turn = true;
+          turn_time_on = 0;
         } else if (ble_right) {
           turn_state = RIGHT;
           right_turn = true;
+          turn_time_on = 0;
         } else {
           turn_state = OFF;
           printf("IN STATE OFF\n");
@@ -332,15 +352,15 @@ int main (void) {
       }
       case LEFT: {
         if (ble_left || turn_time_on > 60 || turned_left) {
+          printf("ble_left: %i, turn_time: %i, turned_left: %i\n", ble_left, turn_time_on > 60, turned_left);
           turn_state = OFF;
-          turn_time_on = 0;
         } else if (ble_right) {
           turn_state = RIGHT;
           right_turn = true;
+          turn_time_on = 0;
         } else {
           turn_state = LEFT;
           left_turn = true;
-          turn_time_on++;
           printf("IN STATE LEFT\n");
         }
         break;
@@ -348,14 +368,13 @@ int main (void) {
       case RIGHT: {
         if (ble_right || turn_time_on > 60 || turned_right) {
           turn_state = OFF;
-          turn_time_on = 0;
         } else if (ble_left) {
           turn_state = LEFT;
           left_turn = true;
+          turn_time_on = 0;
         } else {
           turn_state = RIGHT;
           right_turn = true;
-          turn_time_on++;
           printf("IN STATE RIGHT\n");
         }
         break;
