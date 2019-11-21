@@ -120,12 +120,6 @@ int main (void) {
   set_up_app_timer();
   init_ultrasonic_ranger(D);
 
-  
-  create_timer();
-
-  error_code = app_timer_start(m_timer_id, APP_TIMER_TICKS(5000), NULL);
-  APP_ERROR_CHECK(error_code);
-
 
   // initialization complete
   printf("Buckler initialized!\n");
@@ -184,11 +178,6 @@ int main (void) {
     long range = ultrasonic_ranger_loop_call();
     printf("Range: %ld\n", range);
 
-    // timer testing
-    uint32_t timer_ticks = app_timer_cnt_get();
-    printf("Timer value: %ld\n", timer_ticks);
-    printf("Timer in secs: %ld\n\n", app_timer_ticks_to_ms(timer_ticks));
-
     /******** ORIGINAL ULTRASONIC TESTING **********/
     /*
     printf("SEND OUT SOUND\n");
@@ -229,7 +218,7 @@ int main (void) {
     // if (left_sensed || left_othersensed) {
     //     display_write("Object Detected", 1);
     // }
-    nrf_delay_ms(1000);
+    nrf_delay_ms(500);
   }
 }
 

@@ -11,6 +11,7 @@ ultrasonic_state_t ranger_state = SWITCH_TO_OUTPUT;
 		// state of the ultrasonic ranger
 long range = 0; // represents the calculated range
 uint32_t duration = 0; // used to measure the length input is high
+uint32_t timer_start_rtc = 0; // rtc counter value when timer started
 uint32_t timer_val = 0; // used to measure time for
 						// output timing and input timeout
 // represents which buckler port we're using
@@ -22,14 +23,14 @@ uint32_t ranger_port_pin_num = BUCKLER_GROVE_D0; // the actual pin number
 // always set the timer to 1000 so if it's ever called, something went wrong
 // and we want to restart measurement.
 // otherwise for normal switching, we should do it before the timer ends
-#define RANGER_TIMEOUT 1000 // 1 second
+#define RANGER_TIMEOUT (10000) // 1 second
 
 // gets called when timer runs out and doesn't transition states as expected.
 // will move to switch_to_output
 static void ranger_timeout_handler(void * p_context)
 {
-	// dummy function that doesn't do anything just for 
-
+	// if timer actually times out, then we reset and go back to output mode
+	ranger_state = SWITCH_TO_OUTPUT;
 }
 
 APP_TIMER_DEF(ranger_timer);
@@ -54,6 +55,31 @@ uint32_t app_timer_ticks_to_ms(uint32_t ticks)
                   (uint64_t)APP_TIMER_CLOCK_FREQ));
 }
 
+/**** timer wrapper functions ****/
+void ranger_timer_start()
+{
+  ret_code_t error_code = app_timer_start(ranger_timer, APP_TIMER_TICKS(RANGER_TIMEOUT), NULL);
+  timer_start_rtc = app_timer_cnt_get();
+  APP_ERROR_CHECK(error_code);
+}
+void ranger_timer_stop()
+{
+  ret_code_t error_code = app_timer_stop(ranger_timer);
+  APP_ERROR_CHECK(error_code);
+}
+uint32_t ranger_get_time_ms()
+{
+	// in the case of overflow
+	uint32_t curr_rtc_val = app_timer_cnt_get();
+	if (curr_rtc_val < timer_start_rtc)
+	{
+		return app_timer_ticks_to_ms((APP_TIMER_MAX_CNT_VAL - timer_start_rtc) + curr_rtc_val);
+	}
+	else
+	{
+		return app_timer_ticks_to_ms(curr_rtc_val - timer_start_rtc);
+	}
+}
 
 /************* RANGER HELPER FUNCS *************/
 /**** set input/output ****/
@@ -115,7 +141,10 @@ long ultrasonic_ranger_loop_call()
 		{
 			printf("SWITCH_TO_OUTPUT\n");
 			set_ranger_to_output();
+
+			// set to low and start timer
 			ranger_disable_output();
+			ranger_timer_start();
 
 			ranger_state = FIRST_LOW;
 			break;
@@ -124,7 +153,15 @@ long ultrasonic_ranger_loop_call()
 		case FIRST_LOW:
 		{
 			printf("FIRST_LOW\n");
-			ranger_state = SEND_OUT_SIGNAL;
+
+			// wait until timer is 2
+			timer_val = ranger_get_time_ms();
+			printf("Current ranger time: %ld\n", timer_val);
+			if (timer_val > 2000)
+			{
+				ranger_state = SEND_OUT_SIGNAL;	
+				ranger_timer_stop();
+			}
 			break;
 		}
 
