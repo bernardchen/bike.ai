@@ -50,6 +50,19 @@ nrf_saadc_value_t sample_value (uint8_t channel) {
 
 
 
+/**@brief Function starting the internal LFCLK oscillator.
+ *
+ * @details This is needed by RTC1 which is used by the Application Timer
+ *          (When SoftDevice is enabled the LFCLK is always running and this is not needed).
+ */
+// obtained from tutorial: 
+// https://devzone.nordicsemi.com/nordic/short-range-guides/b/software-development-kit/posts/application-timer-tutorial 
+static void lfclk_request(void)
+{
+    ret_code_t err_code = nrf_drv_clock_init();
+    APP_ERROR_CHECK(err_code);
+    nrf_drv_clock_lfclk_request(NULL);
+}
 
 
 static void timer_handler(void * p_context)
@@ -119,18 +132,14 @@ int main (void) {
   /********* ultrasonic ranger stuff *********/
   init_ultrasonic_ranger(D);
 
+  lfclk_request();
   error_code = app_timer_init();
   APP_ERROR_CHECK(error_code);
   
   create_timer();
 
-  error_code = app_timer_start(m_timer_id, APP_TIMER_TICKS(500), NULL);
+  error_code = app_timer_start(m_timer_id, APP_TIMER_TICKS(5000), NULL);
   APP_ERROR_CHECK(error_code);
-
-  printf("Timer value: %ld\n", app_timer_cnt_get());
-  nrf_delay_ms(5000);
-  printf("Timer value: %ld\n", app_timer_cnt_get());
-
 
 
   // initialization complete
