@@ -8,6 +8,7 @@
 #include <math.h>
 
 #include "app_error.h"
+#include "app_timer.h"
 #include "nrf.h"
 #include "nrf_delay.h"
 #include "nrf_gpio.h"
@@ -36,6 +37,7 @@
 // callback for SAADC events
 void saadc_callback (nrfx_saadc_evt_t const * p_event) {
   // don't care about adc callbacks
+  printf("\n\n\nsaadc callback happening\n\n\n");
 }
 
 // sample a particular analog channel in blocking mode
@@ -45,6 +47,33 @@ nrf_saadc_value_t sample_value (uint8_t channel) {
   APP_ERROR_CHECK(error_code);
   return val;
 }
+
+
+
+
+
+static void timer_handler(void * p_context)
+{
+  printf("\n\nTimer handler called!!\n\n");
+}
+
+APP_TIMER_DEF(m_timer_id);
+void create_timer()
+{
+  ret_code_t err_code;
+
+    // Create timers
+  err_code = app_timer_create(&m_timer_id,
+                                APP_TIMER_MODE_SINGLE_SHOT,
+                                timer_handler);
+  APP_ERROR_CHECK(err_code);
+  printf("\n\nTimer created!!\n\n");
+}
+
+
+
+
+
 
 int main (void) {
   ret_code_t error_code = NRF_SUCCESS;
@@ -84,7 +113,25 @@ int main (void) {
   error_code = nrfx_saadc_channel_init(Z_CHANNEL, &channel_config);
   APP_ERROR_CHECK(error_code);
 
+
+
+
+  /********* ultrasonic ranger stuff *********/
   init_ultrasonic_ranger(D);
+
+  error_code = app_timer_init();
+  APP_ERROR_CHECK(error_code);
+  
+  create_timer();
+
+  error_code = app_timer_start(m_timer_id, APP_TIMER_TICKS(500), NULL);
+  APP_ERROR_CHECK(error_code);
+
+  printf("Timer value: %ld\n", app_timer_cnt_get());
+  nrf_delay_ms(5000);
+  printf("Timer value: %ld\n", app_timer_cnt_get());
+
+
 
   // initialization complete
   printf("Buckler initialized!\n");
@@ -96,23 +143,25 @@ int main (void) {
   // loop forever
   
   // init display
-  nrf_drv_spi_t spi_instance = NRF_DRV_SPI_INSTANCE(1);
-  nrf_drv_spi_config_t spi_config = {
-    .sck_pin = BUCKLER_LCD_SCLK,
-    .mosi_pin = BUCKLER_LCD_MOSI,
-    .miso_pin = BUCKLER_LCD_MISO,
-    .ss_pin = BUCKLER_LCD_CS,
-    .irq_priority = NRFX_SPI_DEFAULT_CONFIG_IRQ_PRIORITY,
-    .orc = 0,
-    .frequency = NRF_DRV_SPI_FREQ_4M,
-    .mode = NRF_DRV_SPI_MODE_2,
-    .bit_order = NRF_DRV_SPI_BIT_ORDER_MSB_FIRST
-  };
-  error_code = nrf_drv_spi_init(&spi_instance, &spi_config, NULL, NULL);
-  APP_ERROR_CHECK(error_code);
-  display_init(&spi_instance);
-  display_write("Hello, Human!", DISPLAY_LINE_0);
-  printf("Display initialized!\n");
+  // nrf_drv_spi_t spi_instance = NRF_DRV_SPI_INSTANCE(1);
+  // nrf_drv_spi_config_t spi_config = {
+  //   .sck_pin = BUCKLER_LCD_SCLK,
+  //   .mosi_pin = BUCKLER_LCD_MOSI,
+  //   .miso_pin = BUCKLER_LCD_MISO,
+  //   .ss_pin = BUCKLER_LCD_CS,
+  //   .irq_priority = NRFX_SPI_DEFAULT_CONFIG_IRQ_PRIORITY,
+  //   .orc = 0,
+  //   .frequency = NRF_DRV_SPI_FREQ_4M,
+  //   .mode = NRF_DRV_SPI_MODE_2,
+  //   .bit_order = NRF_DRV_SPI_BIT_ORDER_MSB_FIRST
+  // };
+  // error_code = nrf_drv_spi_init(&spi_instance, &spi_config, NULL, NULL);
+  // APP_ERROR_CHECK(error_code);
+  // display_init(&spi_instance);
+  // display_write("Hello, Human!", DISPLAY_LINE_0);
+  // printf("Display initialized!\n");
+  // display_write("no", 1);
+
 
   //init SD card logging
   /*printf("trying to init logger\n");
@@ -121,7 +170,6 @@ int main (void) {
   simple_logger_power_on();  
   printf("logger powered on\n");*/
 
-  display_write("no", 1);
   while (1) {
     // sample analog inputs
     nrf_saadc_value_t x_val = sample_value(X_CHANNEL);
@@ -136,8 +184,14 @@ int main (void) {
     double psi = atan(y_acc / pow(pow(x_acc, 2) + pow(z_acc, 2), 0.5)) * radToDeg;
     double phi = atan(z_acc / pow(pow(y_acc, 2) + pow(x_acc, 2), 0.5)) * radToDeg;
 
+
+
+    /**** Ultrasonic ranger stuff ****/
     long range = ultrasonic_ranger_loop_call();
     printf("Range: %ld\n", range);
+
+    // timer testing
+    printf("Timer value: %ld\n", app_timer_cnt_get());
 
     /******** ORIGINAL ULTRASONIC TESTING **********/
     /*
