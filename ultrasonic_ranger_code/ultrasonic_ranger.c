@@ -3,16 +3,18 @@
 #include "ultrasonic_ranger.h"
 
 
+
+
 ultrasonic_state_t ranger_state = SWITCH_TO_OUTPUT;
 		// state of the ultrasonic ranger
 long range = 0; // represents the calculated range
 uint32_t duration = 0; // used to measure the length input is high
 uint32_t timer_val = 0; // used to measure time for
 						// output timing and input timeout
+buckler_port_t ranger_port = BUCKLER_GROVE_D0;
 
-void init_ultrasonic_ranger(buckler_port_t ranger_port)
+void set_ranger_to_input()
 {
-	// A1/D1 is not used by this sensor
 	switch (ranger_port)
 	{
 		case A:
@@ -26,6 +28,30 @@ void init_ultrasonic_ranger(buckler_port_t ranger_port)
 			break;
 		}
 	}
+}
+
+void set_ranger_to_output()
+{
+	switch (ranger_port)
+	{
+		case A:
+		{
+			nrf_gpio_cfg_output(BUCKLER_GROVE_A0);
+			break;
+		}
+		case D:
+		{
+			nrf_gpio_cfg_output(BUCKLER_GROVE_D0);
+			break;
+		}
+	}
+}
+
+void init_ultrasonic_ranger(buckler_port_t port)
+{
+	ranger_port = port;
+	// A1/D1 is not used by this sensor
+	set_ranger_to_output();
 }
 
 long ultrasonic_ranger_loop_call()

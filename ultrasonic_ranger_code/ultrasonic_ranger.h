@@ -33,7 +33,7 @@ typedef enum {
 	D
 } buckler_port_t;
 
-void init_ultrasonic_ranger(buckler_port_t ranger_port);
+void init_ultrasonic_ranger(buckler_port_t port);
 
 // The function to call inside the while loop.
 // This needs to be repeatedly called to
