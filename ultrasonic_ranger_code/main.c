@@ -64,26 +64,13 @@ static void lfclk_request(void)
     nrf_drv_clock_lfclk_request(NULL);
 }
 
-
-static void timer_handler(void * p_context)
+/***** SHOULD BE CALLED AT THE VERY START OF MAIN SO EVERYTHING INVOLVING app_timer IS SET UP *****/
+static void set_up_app_timer(void)
 {
-  printf("\n\nTimer handler called!!\n\n");
+  lfclk_request();
+  ret_code_t error_code = app_timer_init();
+  APP_ERROR_CHECK(error_code);
 }
-
-APP_TIMER_DEF(m_timer_id);
-void create_timer()
-{
-  ret_code_t err_code;
-
-    // Create timers
-  err_code = app_timer_create(&m_timer_id,
-                                APP_TIMER_MODE_SINGLE_SHOT,
-                                timer_handler);
-  APP_ERROR_CHECK(err_code);
-  printf("\n\nTimer created!!\n\n");
-}
-
-
 
 
 
@@ -130,11 +117,9 @@ int main (void) {
 
 
   /********* ultrasonic ranger stuff *********/
+  set_up_app_timer();
   init_ultrasonic_ranger(D);
 
-  lfclk_request();
-  error_code = app_timer_init();
-  APP_ERROR_CHECK(error_code);
   
   create_timer();
 
@@ -200,7 +185,9 @@ int main (void) {
     printf("Range: %ld\n", range);
 
     // timer testing
-    printf("Timer value: %ld\n", app_timer_cnt_get());
+    uint32_t timer_ticks = app_timer_cnt_get();
+    printf("Timer value: %ld\n", timer_ticks);
+    printf("Timer in secs: %ld\n\n", app_timer_ticks_to_ms(timer_ticks));
 
     /******** ORIGINAL ULTRASONIC TESTING **********/
     /*
