@@ -119,6 +119,7 @@ int main (void) {
   /********* ultrasonic ranger stuff *********/
   set_up_app_timer();
   init_ultrasonic_ranger(D);
+  nrf_gpio_cfg_output(BUCKLER_LED0);
 
 
   // initialization complete
@@ -176,8 +177,17 @@ int main (void) {
 
     /**** Ultrasonic ranger stuff ****/
     long range = ultrasonic_ranger_loop_call();
-    printf("Range: %ld\n", range);
+    //printf("Range: %ld\n", range);
 
+    if (range <= 250)
+    {
+      nrf_gpio_pin_clear(BUCKLER_LED0);  
+    }
+    else
+    {
+      nrf_gpio_pin_set(BUCKLER_LED0);
+    }
+    
     /******** ORIGINAL ULTRASONIC TESTING **********/
     /*
     printf("SEND OUT SOUND\n");
