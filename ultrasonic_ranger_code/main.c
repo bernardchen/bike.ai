@@ -206,7 +206,7 @@ int main (void) {
     }
     
     printf("\nEnd input read\n\n");
-    */
+    //*/
 
     //printf("pin3: %x pin4: %x",left_sensed,left_othersensed);
     // display results
@@ -218,7 +218,9 @@ int main (void) {
     // if (left_sensed || left_othersensed) {
     //     display_write("Object Detected", 1);
     // }
-    nrf_delay_ms(500);
+
+    //nrf_delay_ms(500);
+    //nrf_delay_ms(1);
   }
 }
 

@@ -18,7 +18,7 @@ typedef enum {
 	SWITCH_TO_OUTPUT,
 	FIRST_LOW,
 	SEND_OUT_SIGNAL,
-	SET_LOW_AND_SWITCH_TO_INPUT,
+	// SET_LOW_AND_SWITCH_TO_INPUT, // no longer need because do this on transition
 	WAIT_FOR_PREV_END,
 	WAIT_FOR_START,
 	WAIT_FOR_END,

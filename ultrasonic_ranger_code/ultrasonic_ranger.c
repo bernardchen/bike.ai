@@ -1,3 +1,8 @@
+// REMOVE AFTER DEBUGGING
+#include "nrf_delay.h"
+
+
+
 
 #include "app_error.h"
 #include "app_timer.h"
@@ -31,6 +36,8 @@ static void ranger_timeout_handler(void * p_context)
 {
 	// if timer actually times out, then we reset and go back to output mode
 	ranger_state = SWITCH_TO_OUTPUT;
+	// also set range to 0
+	range = 0;
 }
 
 APP_TIMER_DEF(ranger_timer);
@@ -47,11 +54,11 @@ void ranger_timer_init()
   printf("\n\nUltrasonic Ranger timer created!\n\n");
 }
 
-// used to convert tick values to milliseconds
-uint32_t app_timer_ticks_to_ms(uint32_t ticks)
+// used to convert tick values to microseconds
+uint32_t app_timer_ticks_to_usec(uint32_t ticks)
 {
   return ((uint32_t)ROUNDED_DIV(
-                  (ticks) * 1000 * (APP_TIMER_CONFIG_RTC_FREQUENCY + 1),
+                  (ticks) * 1000000 * (APP_TIMER_CONFIG_RTC_FREQUENCY + 1),
                   (uint64_t)APP_TIMER_CLOCK_FREQ));
 }
 
@@ -67,17 +74,18 @@ void ranger_timer_stop()
   ret_code_t error_code = app_timer_stop(ranger_timer);
   APP_ERROR_CHECK(error_code);
 }
-uint32_t ranger_get_time_ms()
+// timer_start_rtc is already set by ranger_timer_start()
+uint32_t ranger_get_time_usec()
 {
 	// in the case of overflow
 	uint32_t curr_rtc_val = app_timer_cnt_get();
 	if (curr_rtc_val < timer_start_rtc)
 	{
-		return app_timer_ticks_to_ms((APP_TIMER_MAX_CNT_VAL - timer_start_rtc) + curr_rtc_val);
+		return app_timer_ticks_to_usec((APP_TIMER_MAX_CNT_VAL - timer_start_rtc) + curr_rtc_val);
 	}
 	else
 	{
-		return app_timer_ticks_to_ms(curr_rtc_val - timer_start_rtc);
+		return app_timer_ticks_to_usec(curr_rtc_val - timer_start_rtc);
 	}
 }
 
@@ -90,7 +98,6 @@ void set_ranger_to_input()
 void set_ranger_to_output()
 {
 	nrf_gpio_cfg_output(ranger_port_pin_num);
-
 }
 
 /**** change outputs ****/
@@ -100,7 +107,13 @@ void ranger_disable_output()
 }
 void ranger_enable_output()
 {
-	nrf_gpio_pin_clear(ranger_port_pin_num);
+	nrf_gpio_pin_set(ranger_port_pin_num);
+}
+
+// get input value
+uint32_t ranger_get_input()
+{
+	return nrf_gpio_pin_read(ranger_port_pin_num);
 }
 
 
@@ -155,12 +168,17 @@ long ultrasonic_ranger_loop_call()
 			printf("FIRST_LOW\n");
 
 			// wait until timer is 2
-			timer_val = ranger_get_time_ms();
+			timer_val = ranger_get_time_usec();
 			printf("Current ranger time: %ld\n", timer_val);
-			if (timer_val > 2000)
+			if (timer_val >= 2)
 			{
-				ranger_state = SEND_OUT_SIGNAL;	
 				ranger_timer_stop();
+
+				// set to high and start timer
+				ranger_enable_output();
+				ranger_timer_start();
+
+				ranger_state = SEND_OUT_SIGNAL;	
 			}
 			break;
 		}
@@ -168,43 +186,81 @@ long ultrasonic_ranger_loop_call()
 		case SEND_OUT_SIGNAL:
 		{
 			printf("SEND_OUT_SIGNAL\n");
-			ranger_state = SET_LOW_AND_SWITCH_TO_INPUT;
-			break;
-		}
+			timer_val = ranger_get_time_usec();
+			printf("Current ranger time: %ld\n", timer_val);
+			if (timer_val >= 5)
+			{
+				// set to low and swich to input
+				ranger_timer_stop();
+				ranger_disable_output();
 
-		case SET_LOW_AND_SWITCH_TO_INPUT:
-		{
-			printf("SET_LOW_AND_SWITCH_TO_INPUT\n");
-			ranger_state = WAIT_FOR_PREV_END;
+				set_ranger_to_input();
+				ranger_timer_start();
+
+				ranger_state = WAIT_FOR_PREV_END;
+			}
 			break;
 		}
 
 		case WAIT_FOR_PREV_END:
 		{
 			printf("WAIT_FOR_PREV_END\n");
-			ranger_state = WAIT_FOR_START;
+
+			// wait unti low
+			if (!ranger_get_input())
+			{
+				ranger_timer_stop();
+				ranger_state = WAIT_FOR_START;	
+				ranger_timer_start();
+			}
 			break;
 		}
 
 		case WAIT_FOR_START:
 		{
 			printf("WAIT_FOR_START\n");
-			ranger_state = WAIT_FOR_END;
+
+			if (timer_val >= 1000)
+			{
+				nrf_delay_ms(100000);
+			}
+
+			// wait until high
+			if (ranger_get_input())
+			{
+				ranger_timer_stop();
+				ranger_state = WAIT_FOR_END;
+				// start time is automatically set with ranger_timer_start()
+				ranger_timer_start();
+			}
 			break;
 		}
 
 		case WAIT_FOR_END:
 		{
 			printf("WAIT_FOR_END\n");
-			ranger_state = CALCULATE_DISTANCE;
+
+			// wait until low
+			if (!ranger_get_input())
+			{
+				printf("INPUT IS LOW!!\n");
+				duration = ranger_get_time_usec();
+				ranger_timer_stop();
+				ranger_state = CALCULATE_DISTANCE;
+			}
 			break;
 		}
 
 		case CALCULATE_DISTANCE:
 		{
 			printf("CALCULATE_DISTANCE\n");
+			//printf("Current ranger time: %ld\n", ranger_get_time_usec());
 			ranger_state = SWITCH_TO_OUTPUT;
-			range += 1;
+			range = duration / 29 / 2;
+
+			printf("DISTANCE: %ld\n", range);
+
+			nrf_delay_ms(100000);
 			break;
 		}
 	}
