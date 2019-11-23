@@ -1,7 +1,3 @@
-// REMOVE AFTER DEBUGGING
-#include "nrf_delay.h"
-
-
 
 
 #include "app_error.h"
@@ -28,7 +24,7 @@ uint32_t ranger_port_pin_num = BUCKLER_GROVE_D0; // the actual pin number
 // always set the timer to 1000 so if it's ever called, something went wrong
 // and we want to restart measurement.
 // otherwise for normal switching, we should do it before the timer ends
-#define RANGER_TIMEOUT (10000) // 1 second
+#define RANGER_TIMEOUT (1000) // 1 second
 
 // gets called when timer runs out and doesn't transition states as expected.
 // will move to switch_to_output
@@ -152,7 +148,6 @@ long ultrasonic_ranger_loop_call()
 	{
 		case SWITCH_TO_OUTPUT:
 		{
-			printf("SWITCH_TO_OUTPUT\n");
 			set_ranger_to_output();
 
 			// set to low and start timer
@@ -165,11 +160,8 @@ long ultrasonic_ranger_loop_call()
 
 		case FIRST_LOW:
 		{
-			printf("FIRST_LOW\n");
-
 			// wait until timer is 2
 			timer_val = ranger_get_time_usec();
-			printf("Current ranger time: %ld\n", timer_val);
 			if (timer_val >= 2)
 			{
 				ranger_timer_stop();
@@ -185,9 +177,7 @@ long ultrasonic_ranger_loop_call()
 
 		case SEND_OUT_SIGNAL:
 		{
-			printf("SEND_OUT_SIGNAL\n");
 			timer_val = ranger_get_time_usec();
-			printf("Current ranger time: %ld\n", timer_val);
 			if (timer_val >= 5)
 			{
 				// set to low and swich to input
@@ -204,8 +194,6 @@ long ultrasonic_ranger_loop_call()
 
 		case WAIT_FOR_PREV_END:
 		{
-			printf("WAIT_FOR_PREV_END\n");
-
 			// wait unti low
 			if (!ranger_get_input())
 			{
@@ -218,13 +206,6 @@ long ultrasonic_ranger_loop_call()
 
 		case WAIT_FOR_START:
 		{
-			printf("WAIT_FOR_START\n");
-
-			if (timer_val >= 1000)
-			{
-				nrf_delay_ms(100000);
-			}
-
 			// wait until high
 			if (ranger_get_input())
 			{
@@ -238,12 +219,9 @@ long ultrasonic_ranger_loop_call()
 
 		case WAIT_FOR_END:
 		{
-			printf("WAIT_FOR_END\n");
-
 			// wait until low
 			if (!ranger_get_input())
 			{
-				printf("INPUT IS LOW!!\n");
 				duration = ranger_get_time_usec();
 				ranger_timer_stop();
 				ranger_state = CALCULATE_DISTANCE;
@@ -253,14 +231,9 @@ long ultrasonic_ranger_loop_call()
 
 		case CALCULATE_DISTANCE:
 		{
-			printf("CALCULATE_DISTANCE\n");
-			//printf("Current ranger time: %ld\n", ranger_get_time_usec());
 			ranger_state = SWITCH_TO_OUTPUT;
 			range = duration / 29 / 2;
 
-			printf("DISTANCE: %ld\n", range);
-
-			nrf_delay_ms(100000);
 			break;
 		}
 	}
