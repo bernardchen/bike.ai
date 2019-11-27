@@ -16,3 +16,16 @@ Investigate why app_timer_init() stuff needs ble to be initialized?
 Look into getting an LED matrix panel and hooking that up.
 Abstract out methods even further (into their own .h and .c files)
 Implement velocity readings from hall-effect sensors.
+
+11/26
+Did some work on BLE
+Big idea: need to use Nordic BLE API to scan for peripherals and connect
+to the button as a periperal. Discover the characteristics and monitor which
+one corresponds to a button press.
+(The nRF app on the phone is acting as a central, discovers peripherals
+and connects. Finds characteristics and stuff, we need to do that)
+
+Flic button macs : 80:e4:da:73:b4:50, 80:e4:da:73:b6:8d
+
+Moved the actual main.c -> ../old.c
+main.c is now just ble_adv_listen_template/main.c
