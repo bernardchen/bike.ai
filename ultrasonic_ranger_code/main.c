@@ -82,10 +82,10 @@ int main (void) {
   error_code = NRF_LOG_INIT(NULL);
   APP_ERROR_CHECK(error_code);
   NRF_LOG_DEFAULT_BACKENDS_INIT();
-  // nrf_gpio_cfg_input(BUCKLER_GROVE_A1,NRF_GPIO_PIN_NOPULL);
+  // nrf_gpio_cfg_input(BUCKLER_GROVE_A1,NRF_GPIO_PIN_PULLUP);
   // nrf_gpio_cfg_input(BUCKLER_GROVE_A0,NRF_GPIO_PIN_NOPULL);
   // nrf_gpio_cfg_input(BUCKLER_GROVE_D0, NRF_GPIO_PIN_NOPULL);
-  // nrf_gpio_cfg_input(BUCKLER_GROVE_D1, NRF_GPIO_PIN_NOPULL);
+  nrf_gpio_cfg_input(BUCKLER_GROVE_D1, NRF_GPIO_PIN_PULLUP);
   // initialize analog to digital converter
   nrfx_saadc_config_t saadc_config = NRFX_SAADC_DEFAULT_CONFIG;
   saadc_config.resolution = NRF_SAADC_RESOLUTION_12BIT;
@@ -188,6 +188,9 @@ int main (void) {
       nrf_gpio_pin_set(BUCKLER_LED0);
     }
     
+
+    printf("Hall Effect value: %ld\n", nrf_gpio_pin_read(BUCKLER_GROVE_D1));
+
     /******** ORIGINAL ULTRASONIC TESTING **********/
     /*
     printf("SEND OUT SOUND\n");
