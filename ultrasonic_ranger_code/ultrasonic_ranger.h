@@ -33,7 +33,7 @@ typedef enum {
 	D
 } buckler_port_t;
 
-void init_ultrasonic_ranger(buckler_port_t port);
+void init_ultrasonic_ranger(buckler_port_t port, uint32_t initLEDs);
 
 // The function to call inside the while loop.
 // This needs to be repeatedly called to
@@ -44,3 +44,15 @@ void init_ultrasonic_ranger(buckler_port_t port);
 // It may also be 0 if for some reason, there is a timeout
 // when trying to obtain the distance.
 long ultrasonic_ranger_loop_call();
+
+
+/************ PROXIMITY WARNING LED WRAPPERS ************/
+// functions to turn on and off the leds for right side
+// (wrapper used to hard code the LEDs used in ultrasonic_ranger.c)
+void turn_on_right_proxi_led();
+void turn_off_right_proxi_led();
+
+// functions to turn on and off the leds for left side
+// (wrapper used to hard code the LEDs used in ultrasonic_ranger.c)
+void turn_on_left_proxi_led();
+void turn_off_left_proxi_led();

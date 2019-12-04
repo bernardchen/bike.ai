@@ -118,8 +118,9 @@ int main (void) {
 
   /********* ultrasonic ranger stuff *********/
   set_up_app_timer();
-  init_ultrasonic_ranger(D);
+  init_ultrasonic_ranger(D, 1);
   nrf_gpio_cfg_output(BUCKLER_LED0);
+  nrf_gpio_cfg_output(BUCKLER_LED2);
 
 
   // initialization complete
@@ -182,14 +183,24 @@ int main (void) {
     if (range <= 250)
     {
       nrf_gpio_pin_clear(BUCKLER_LED0);  
+      turn_on_right_proxi_led();
     }
     else
     {
       nrf_gpio_pin_set(BUCKLER_LED0);
+      turn_off_right_proxi_led();
     }
     
+    if (!nrf_gpio_pin_read(BUCKLER_GROVE_D1))
+    {
+    	nrf_gpio_pin_clear(BUCKLER_LED2);
+    }
+    else
+    {
+    	nrf_gpio_pin_set(BUCKLER_LED2);
+    }
 
-    printf("Hall Effect value: %ld\n", nrf_gpio_pin_read(BUCKLER_GROVE_D1));
+    //printf("Hall Effect value: %ld\n", nrf_gpio_pin_read(BUCKLER_GROVE_D1));
 
     /******** ORIGINAL ULTRASONIC TESTING **********/
     /*

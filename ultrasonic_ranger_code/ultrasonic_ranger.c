@@ -113,9 +113,17 @@ uint32_t ranger_get_input()
 }
 
 
-
-void init_ultrasonic_ranger(buckler_port_t port)
+// Call the function to initialize the ultrasonic ranger
+// port is whether the A or D port on the buckler is being used
+// initLEDs is whether or not to init the hardcoded LEDs too
+	// 0 is don't init, any other value is
+void init_ultrasonic_ranger(buckler_port_t port, uint32_t initLEDs)
 {
+	if (initLEDs)
+	{
+		init_proxi_leds();
+	}
+
 	ranger_port = port;
 	switch (ranger_port)
 	{
@@ -239,4 +247,40 @@ long ultrasonic_ranger_loop_call()
 	}
 
 	return range;
+}
+
+
+
+/************ PROXIMITY WARNING LED WRAPPERS ************/
+// welcome to macro hell
+// reusing the buckler ios
+#define RIGHT_PROXI_LED BUCKLER_LCD_MISO // pin 16
+#define LEFT_PROXI_LED BUCKLER_LCD_CS // pin 18
+
+void init_proxi_leds()
+{
+	nrf_gpio_cfg_output(RIGHT_PROXI_LED);
+	nrf_gpio_cfg_output(LEFT_PROXI_LED);
+}
+
+// functions to turn on and off the leds for right side
+// (wrapper used to hard code the LEDs used in ultrasonic_ranger.c)
+void turn_on_right_proxi_led()
+{
+	nrf_gpio_pin_set(RIGHT_PROXI_LED);
+}
+void turn_off_right_proxi_led()
+{
+	nrf_gpio_pin_clear(RIGHT_PROXI_LED);
+}
+
+// functions to turn on and off the leds for left side
+// (wrapper used to hard code the LEDs used in ultrasonic_ranger.c)
+void turn_on_left_proxi_led()
+{
+	nrf_gpio_pin_set(LEFT_PROXI_LED);
+}
+void turn_off_left_proxi_led()
+{
+	nrf_gpio_pin_clear(LEFT_PROXI_LED);
 }
