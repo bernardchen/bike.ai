@@ -10,7 +10,7 @@
 /************* GLOBAL CONSTS USED BY RANGER *************/
 ultrasonic_state_t ranger_state = SWITCH_TO_OUTPUT;
 		// state of the ultrasonic ranger
-long range = 0; // represents the calculated range
+long range = 600; // represents the calculated range
 uint32_t duration = 0; // used to measure the length input is high
 uint32_t timer_start_rtc = 0; // rtc counter value when timer started
 uint32_t timer_val = 0; // used to measure time for
@@ -33,7 +33,7 @@ static void ranger_timeout_handler(void * p_context)
 	// if timer actually times out, then we reset and go back to output mode
 	ranger_state = SWITCH_TO_OUTPUT;
 	// also set range to 0
-	range = 0;
+	range = 600;
 }
 
 APP_TIMER_DEF(ranger_timer);
