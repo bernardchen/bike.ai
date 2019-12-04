@@ -29,3 +29,7 @@ Flic button macs : 80:e4:da:73:b4:50, 80:e4:da:73:b6:8d
 
 Moved the actual main.c -> ../old.c
 main.c is now just ble_adv_listen_template/main.c
+
+12/3
+Edit ../boards/buckler_revB/app_config.h and compare to example pca/s.../config/sdk_config.h
+Edit ../boards/buckler_revB/Board.mk and include .c files at the end of the file

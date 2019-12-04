@@ -101,6 +101,10 @@ BOARD_SOURCES += \
 	nrf_sdh.c\
 	nrf_sdh_ble.c\
 	simple_ble.c\
+  nrf_ble_scan.c\
+  ble_lbs_c.c\
+  ble_db_discovery.c\
+  ble_conn_state.c\
 
 endif
 
