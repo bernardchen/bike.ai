@@ -222,6 +222,7 @@ int main(void)
 {
     led_init();
     init_accelerometer();
+    pwm_update_color(0);
     while(1)
     {
         nrf_delay_ms(100);
