@@ -84,7 +84,7 @@ NRF_BLE_GATT_DEF(m_gatt);                                               /**< GAT
 BLE_DB_DISCOVERY_ARRAY_DEF(m_db_disc, NRF_SDH_BLE_CENTRAL_LINK_COUNT);  /**< Database discovery module instances. */
 NRF_BLE_SCAN_DEF(m_scan);                                               /**< Scanning Module instance. */
 
-static char const m_target_periph_name[] = "Nordic_Blinky";             /**< Name of the device to try to connect to. This name is searched for in the scanning report data. */
+static char const m_target_periph_name[] = "f023c7aN";             /**< Name of the device to try to connect to. This name is searched for in the scanning report data. */
 
 
 /**@brief Function for handling asserts in the SoftDevice.
@@ -98,10 +98,10 @@ static char const m_target_periph_name[] = "Nordic_Blinky";             /**< Nam
  * @param[in] line_num     Line number of the failing assert call.
  * @param[in] p_file_name  File name of the failing assert call.
  */
-void assert_nrf_callback(uint16_t line_num, const uint8_t * p_file_name)
-{
-    app_error_handler(0xDEADBEEF, line_num, p_file_name);
-}
+//void assert_nrf_callback(uint16_t line_num, const uint8_t * p_file_name)
+//{
+//    app_error_handler(0xDEADBEEF, line_num, p_file_name);
+//}
 
 
 /**@brief Function for initializing the LEDs.
@@ -120,6 +120,10 @@ static void scan_evt_handler(scan_evt_t const * p_scan_evt)
 
     switch(p_scan_evt->scan_evt_id)
     {
+        case NRF_BLE_SCAN_EVT_CONNECTED:
+        {
+            printf("CONNECTED!\n");
+        } break;
         case NRF_BLE_SCAN_EVT_CONNECTING_ERROR:
         {
             err_code = p_scan_evt->params.connecting_err.err_code;
@@ -147,10 +151,10 @@ static void scan_init(void)
     err_code = nrf_ble_scan_init(&m_scan, &init_scan, scan_evt_handler);
     APP_ERROR_CHECK(err_code);
 
-    err_code = nrf_ble_scan_filter_set(&m_scan, SCAN_NAME_FILTER, m_target_periph_name);
+    err_code = nrf_ble_scan_filters_enable(&m_scan, NRF_BLE_SCAN_NAME_FILTER, false);
     APP_ERROR_CHECK(err_code);
 
-    err_code = nrf_ble_scan_filters_enable(&m_scan, NRF_BLE_SCAN_NAME_FILTER, false);
+    err_code = nrf_ble_scan_filter_set(&m_scan, SCAN_NAME_FILTER, m_target_periph_name);
     APP_ERROR_CHECK(err_code);
 }
 
@@ -160,7 +164,7 @@ static void scan_start(void)
 {
     ret_code_t ret;
 
-    NRF_LOG_INFO("Start scanning for device name %s.", (uint32_t)m_target_periph_name);
+    printf("Start scanning for device name %s.\n", (uint32_t)m_target_periph_name);
     ret = nrf_ble_scan_start(&m_scan);
     APP_ERROR_CHECK(ret);
     // Turn on the LED to signal scanning.
@@ -181,7 +185,7 @@ static void scan_start(void)
 //         {
 //             ret_code_t err_code;
 
-//             NRF_LOG_INFO("LED Button Service discovered on conn_handle 0x%x",
+//             printf("LED Button Service discovered on conn_handle 0x%x",
 //                          p_lbs_c_evt->conn_handle);
 
 //             err_code = app_button_enable();
@@ -194,7 +198,7 @@ static void scan_start(void)
 
 //         case BLE_LBS_C_EVT_BUTTON_NOTIFICATION:
 //         {
-//             NRF_LOG_INFO("Link 0x%x, Button state changed on peer to 0x%x",
+//             printf("Link 0x%x, Button state changed on peer to 0x%x",
 //                          p_lbs_c_evt->conn_handle,
 //                          p_lbs_c_evt->params.button.button_state);
 
@@ -233,50 +237,56 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
         // discovery, update LEDs status, and resume scanning, if necessary.
         case BLE_GAP_EVT_CONNECTED:
         {
-            NRF_LOG_INFO("Connection 0x%x established, starting DB discovery.",
+            printf("Connection 0x%x established, starting DB discovery.\n",
                          p_gap_evt->conn_handle);
 
             APP_ERROR_CHECK_BOOL(p_gap_evt->conn_handle < NRF_SDH_BLE_CENTRAL_LINK_COUNT);
 
-            err_code = ble_lbs_c_handles_assign(&m_lbs_c[p_gap_evt->conn_handle],
-                                                p_gap_evt->conn_handle,
-                                                NULL);
-            APP_ERROR_CHECK(err_code);
+            //err_code = ble_lbs_c_handles_assign(&m_lbs_c[p_gap_evt->conn_handle],
+            //                                    p_gap_evt->conn_handle,
+            //                                    NULL);
+            //APP_ERROR_CHECK(err_code);
 
-            err_code = ble_db_discovery_start(&m_db_disc[p_gap_evt->conn_handle],
-                                              p_gap_evt->conn_handle);
-            if (err_code != NRF_ERROR_BUSY)
-            {
-                APP_ERROR_CHECK(err_code);
-            }
+            ble_uuid_t btn_uuid;
+            btn_uuid.type = BLE_UUID_TYPE_BLE;
+            btn_uuid.uuid = 0xf02adfc026e711e49edc0002a5d5c51b;
+            //err_code = ble_db_discovery_evt_register(&btn_uuid);
+            //APP_ERROR_CHECK(err_code);
+
+            //err_code = ble_db_discovery_start(&m_db_disc,
+            //                                  p_gap_evt->conn_handle);
+            //if (err_code != NRF_ERROR_BUSY)
+            //{
+            //    APP_ERROR_CHECK(err_code);
+            //}
 
             // Update LEDs status and check whether it is needed to look for more
             // peripherals to connect to.
             // bsp_board_led_on(CENTRAL_CONNECTED_LED);
-            if (ble_conn_state_central_conn_count() == NRF_SDH_BLE_CENTRAL_LINK_COUNT)
-            {
+            //f (ble_conn_state_central_conn_count() == NRF_SDH_BLE_CENTRAL_LINK_COUNT)
+            //{
                 //bsp_board_led_off(CENTRAL_SCANNING_LED);
-            }
-            else
-            {
+            //}
+            //else
+            //{
                 // Resume scanning.
                 //bsp_board_led_on(CENTRAL_SCANNING_LED);
-                scan_start();
-            }
+                //scan_start();
+            //}
         } break; // BLE_GAP_EVT_CONNECTED
 
         // Upon disconnection, reset the connection handle of the peer that disconnected, update
         // the LEDs status and start scanning again.
         case BLE_GAP_EVT_DISCONNECTED:
         {
-            NRF_LOG_INFO("LBS central link 0x%x disconnected (reason: 0x%x)",
+            printf("LBS central link 0x%x disconnected (reason: 0x%x)",
                          p_gap_evt->conn_handle,
                          p_gap_evt->params.disconnected.reason);
 
             if (ble_conn_state_central_conn_count() == 0)
             {
-                err_code = app_button_disable();
-                APP_ERROR_CHECK(err_code);
+                //err_code = app_button_disable();
+                //APP_ERROR_CHECK(err_code);
 
                 // Turn off the LED that indicates the connection.
                 //bsp_board_led_off(CENTRAL_CONNECTED_LED);
@@ -430,7 +440,7 @@ static void ble_stack_init(void)
 //             err_code = led_status_send_to_all(button_action);
 //             if (err_code == NRF_SUCCESS)
 //             {
-//                 NRF_LOG_INFO("LBS write LED state %d", button_action);
+//                 printf("LBS write LED state %d", button_action);
 //             }
 //             break;
 
@@ -468,11 +478,12 @@ static void ble_stack_init(void)
  */
 static void db_disc_handler(ble_db_discovery_evt_t * p_evt)
 {
-    NRF_LOG_DEBUG("call to ble_lbs_on_db_disc_evt for instance %d and link 0x%x!",
-                  p_evt->conn_handle,
-                  p_evt->conn_handle);
+    printf("DISC_HANDLER CALLED!\n");
+    //NRF_LOG_DEBUG("call to ble_lbs_on_db_disc_evt for instance %d and link 0x%x!",
+    //              p_evt->conn_handle,
+    //              p_evt->conn_handle);
 
-    ble_lbs_on_db_disc_evt(&m_lbs_c[p_evt->conn_handle], p_evt);
+    //ble_lbs_on_db_disc_evt(&m_lbs_c[p_evt->conn_handle], p_evt);
 }
 
 
@@ -548,12 +559,12 @@ int main(void)
     ble_stack_init();
     gatt_init();
     db_discovery_init();
-    lbs_c_init();
+    //lbs_c_init();
     ble_conn_state_init();
     scan_init();
 
     // Start execution.
-    NRF_LOG_INFO("Multilink example started.");
+    printf("Multilink example started.\n");
     scan_start();
 
     for (;;)
