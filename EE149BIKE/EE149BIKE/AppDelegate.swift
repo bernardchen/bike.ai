@@ -1,8 +1,8 @@
 //
 //  AppDelegate.swift
-//  EE149-Final-Project
+//  EE149BIKE
 //
-//  Created by ananya mukerjee on 12/6/19.
+//  Created by ananya mukerjee on 12/7/19.
 //  Copyright © 2019 Bike.ai. All rights reserved.
 //
 
@@ -11,7 +11,6 @@ import UIKit
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
-    var window: UIWindow?
 
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {

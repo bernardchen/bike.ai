@@ -25,7 +25,7 @@
 #include "buckler.h"
 #include "display.h"
 
-#define OUTPUT_PIN 27
+#define OUTPUT_PIN 26
 #define pi acos(-1.0)
 #define radToDeg (180.0 / pi)
 // system_bias = 2.885 / 3.0

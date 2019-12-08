@@ -7,10 +7,38 @@
 //
 
 
+import SwiftUI
 import UIKit
-class ViewController: UIViewController {
-    var userid = ""
-    override func viewDidLoad() {
+
+
+struct ContentView: View {
+    var body: some View {
+        CustomController ()
         
+    }
 }
+
+#if DEBUG
+struct ContentView_Previews: PreviewProvider {
+    static var previews: some View {
+        ContentView()
+    }
 }
+#endif
+ 
+struct CustomController: UIViewControllerRepresentable{
+    func updateUIViewController(_ uiViewController: UIViewController, context: UIViewControllerRepresentableContext<CustomController>) {
+    }
+    
+    
+    typealias UIViewControllerType = UIViewController
+        
+    
+    
+    func makeUIViewController(context: UIViewControllerRepresentableContext<CustomController>) -> CustomController.UIViewControllerType {
+        let storyboard = UIStoryboard(name: "LaunchScreen", bundle: Bundle.main)
+        let controller = storyboard.instantiateViewController(identifier: "Home")
+        return controller
+    }
+}
+

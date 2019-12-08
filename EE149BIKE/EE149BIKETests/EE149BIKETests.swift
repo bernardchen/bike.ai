@@ -1,15 +1,15 @@
 //
-//  EE149_Final_ProjectTests.swift
-//  EE149-Final-ProjectTests
+//  EE149BIKETests.swift
+//  EE149BIKETests
 //
-//  Created by ananya mukerjee on 12/6/19.
+//  Created by ananya mukerjee on 12/7/19.
 //  Copyright © 2019 Bike.ai. All rights reserved.
 //
 
 import XCTest
-@testable import EE149
+@testable import EE149BIKE
 
-class EE149_Final_ProjectTests: XCTestCase {
+class EE149BIKETests: XCTestCase {
 
     override func setUp() {
         // Put setup code here. This method is called before the invocation of each test method in the class.
