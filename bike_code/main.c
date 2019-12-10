@@ -68,7 +68,6 @@
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
 
-
 #define APP_BLE_CONN_CFG_TAG      1                                     /**< Tag that refers to the BLE stack configuration that is set with @ref sd_ble_cfg_set. The default tag is @ref APP_BLE_CONN_CFG_TAG. */
 #define APP_BLE_OBSERVER_PRIO     3                                     /**< BLE observer priority of the application. There is no need to modify this value. */
 
@@ -84,8 +83,11 @@ NRF_BLE_GATT_DEF(m_gatt);                                               /**< GAT
 BLE_DB_DISCOVERY_ARRAY_DEF(m_db_disc, NRF_SDH_BLE_CENTRAL_LINK_COUNT);  /**< Database discovery module instances. */
 NRF_BLE_SCAN_DEF(m_scan);                                               /**< Scanning Module instance. */
 
-static char const m_target_periph_name[] = "f023c7aN";             /**< Name of the device to try to connect to. This name is searched for in the scanning report data. */
+static char const m_target_periph_name[] = "TESTPERIPH";             /**< Name of the device to try to connect to. This name is searched for in the scanning report data. */
 
+uint16_t conn_handle = 0;
+ble_gatt_db_char_t* char_handles = NULL;
+uint16_t num_handles = 0;
 
 /**@brief Function for handling asserts in the SoftDevice.
  *
@@ -233,6 +235,18 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 
     switch (p_ble_evt->header.evt_id)
     {
+        // Custom entered case: Characteristic read
+        case BLE_GATTC_EVT_CHAR_VALS_READ_RSP:
+        {
+          ble_gattc_evt_t const * p_gattc_evt = &p_ble_evt->evt.gattc_evt;
+          ble_gattc_evt_char_vals_read_rsp_t values_read = p_gattc_evt->params.char_vals_read_rsp;
+
+          printf("%s\n", values_read.values);
+        }
+        case BLE_GATTC_EVT_PRIM_SRVC_DISC_RSP:
+        {
+
+        }
         // Upon connection, check which peripheral is connected, initiate DB
         // discovery, update LEDs status, and resume scanning, if necessary.
         case BLE_GAP_EVT_CONNECTED:
@@ -247,18 +261,29 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             //                                    NULL);
             //APP_ERROR_CHECK(err_code);
 
+            // Trying to use Gatt discover
+            // err_code = sd_ble_gattc_primary_services_discover(p_gap_evt->conn_handle, 0x0001,NULL);
+            // APP_ERROR_CHECK(err_code);
+
+            // Trying to use db_discovery
+            //==================================
             ble_uuid_t btn_uuid;
             btn_uuid.type = BLE_UUID_TYPE_BLE;
-            btn_uuid.uuid = 0xf02adfc026e711e49edc0002a5d5c51b;
-            //err_code = ble_db_discovery_evt_register(&btn_uuid);
-            //APP_ERROR_CHECK(err_code);
+            ble_uuid128_t base_uuid = {{0xca,0xa4,0x87,0x0d,0x42,0x84,0xff,0xA9,0x59,0x4D,0x5e,0xf6,0xa0,0xed,0x07,0x46}};
+            btn_uuid.uuid = (service_handle->uuid128.uuid128[12] << 8) |(service_handle->uuid128.uuid128[13]);
+            err_code = sd_ble_uuid_vs_add(&base_uuid, &btn_uuid.type);
+            APP_ERROR_CHECK(err_code);
 
-            //err_code = ble_db_discovery_start(&m_db_disc,
-            //                                  p_gap_evt->conn_handle);
-            //if (err_code != NRF_ERROR_BUSY)
-            //{
-            //    APP_ERROR_CHECK(err_code);
-            //}
+            btn_uuid.uuid = CUSTOM_SERVICE_UUID;//0xca,0xa4,0x87,0x0d,0x42,0x84,0xff,0xA9,0x59,0x4D,0x5e,0xf6,0xa0,0xed,0x07,0x46;
+            err_code = ble_db_discovery_evt_register(&btn_uuid);
+            APP_ERROR_CHECK(err_code);
+
+            err_code = ble_db_discovery_start(&m_db_disc,
+                                              p_gap_evt->conn_handle);
+            if (err_code != NRF_ERROR_BUSY)
+            {
+                APP_ERROR_CHECK(err_code);
+            }
 
             // Update LEDs status and check whether it is needed to look for more
             // peripherals to connect to.
@@ -273,6 +298,7 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
                 //bsp_board_led_on(CENTRAL_SCANNING_LED);
                 //scan_start();
             //}
+
         } break; // BLE_GAP_EVT_CONNECTED
 
         // Upon disconnection, reset the connection handle of the peer that disconnected, update
@@ -484,6 +510,14 @@ static void db_disc_handler(ble_db_discovery_evt_t * p_evt)
     //              p_evt->conn_handle);
 
     //ble_lbs_on_db_disc_evt(&m_lbs_c[p_evt->conn_handle], p_evt);
+    if (p_evt->evt_type == BLE_DB_DISCOVERY_SRV_NOT_FOUND) {
+      printf("Something went wrong, Service not found\n");
+    }
+
+    conn_handle = p_evt->conn_handle;
+    char_handles = p_evt->params.discovered_db.charateristics;
+    num_handles = p_evt->params.discovered_db.char_count;
+    printf("Conn_handle: %x\nChar_handles: %x\n, Num_handles: %i\n", conn_handle, char_handles, num_handles);
 }
 
 
@@ -570,5 +604,9 @@ int main(void)
     for (;;)
     {
         idle_state_handle();
+        if (num_handles != 0) {
+          ret_code_t err_code = sd_ble_gattc_char_values_read(conn_handle, char_handles, num_handles);
+          APP_ERROR_CHECK(err_code);
+        }
     }
 }
