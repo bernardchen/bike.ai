@@ -24,8 +24,10 @@
 // buckler includes
 #include "buckler.h"
 #include "display.h"
+#include "mpu9250.h"
 
 // project includes
+#include "gpio.h"
 #include "ultrasonic_ranger.h"
 
 // macros for accelerometer
@@ -40,6 +42,12 @@
 #define X_CHANNEL 0
 #define Y_CHANNEL 1
 #define Z_CHANNEL 2
+
+// Create timer
+APP_TIMER_DEF(main_timer);
+
+// I2C manager
+NRF_TWI_MNGR_DEF(twi_mngr_instance, 5, 0);
 
 // Bucker LED array
 static uint8_t LEDS[3] = {BUCKLER_LED0, BUCKLER_LED1, BUCKLER_LED2};
@@ -97,6 +105,22 @@ void init_accelerometer() {
   APP_ERROR_CHECK(error_code);
 
   printf("Accelerometer initialized!\n");
+}
+
+void init_mpu9250() {
+  ret_code_t error_code = NRF_SUCCESS;
+
+  // initialize i2c master (two wire interface)
+  nrf_drv_twi_config_t i2c_config = NRF_DRV_TWI_DEFAULT_CONFIG;
+  i2c_config.scl = BUCKLER_SENSORS_SCL;
+  i2c_config.sda = BUCKLER_SENSORS_SDA;
+  i2c_config.frequency = NRF_TWIM_FREQ_100K;
+  error_code = nrf_twi_mngr_init(&twi_mngr_instance, &i2c_config);
+  APP_ERROR_CHECK(error_code);
+
+  // initialize MPU-9250 driver
+  mpu9250_init(&twi_mngr_instance);
+  printf("MPU-9250 initialized\n");
 }
 
 void init_SD_logging() {
@@ -172,6 +196,25 @@ static void set_up_app_timer(void)
   APP_ERROR_CHECK(error_code);
 }
 
+// timer stuff for timeout
+// Callback function for timer
+// turn_time_on used for turn signal state machine
+uint32_t turn_time_on = 0;
+uint32_t button_press_time = 0;
+void main_timer_callback() {
+  turn_time_on++;
+  button_press_time++;
+}
+
+void init_main_timer() {
+  app_timer_create(&main_timer, APP_TIMER_MODE_REPEATED, (app_timer_timeout_handler_t) main_timer_callback);
+  app_timer_start(main_timer, APP_TIMER_TICKS(1000), NULL); // 1000 milliseconds
+  printf("Timer initialized\n");
+}
+
+void init_button0() {
+  gpio_config(28, 0);
+}
 
 
 void sample_accel(double* x_acc, double* y_acc, double* z_acc) {
@@ -189,6 +232,15 @@ void sample_accel(double* x_acc, double* y_acc, double* z_acc) {
   //double phi = atan(z_acc / pow(pow(y_acc, 2) + pow(x_acc, 2), 0.5)) * radToDeg;
 }
 
+void sample_9250_accelerometer(float* x_axis, float* y_axis, float* z_axis) {
+  mpu9250_measurement_t accelerometer_measurement = mpu9250_read_accelerometer();
+  *x_axis = accelerometer_measurement.x_axis;
+  *y_axis = accelerometer_measurement.y_axis;
+  *z_axis = accelerometer_measurement.z_axis;
+}
+
+
+
 typedef enum {
   RIGHT,
   LEFT,
@@ -200,8 +252,11 @@ int main (void) {
   // Initialization code
   init_RTT();
   init_accelerometer();
+  init_mpu9250();
   init_buckler_LEDs();
   set_up_app_timer();
+  init_main_timer();
+  init_button0();
   /********* ultrasonic ranger stuff *********/
   init_ultrasonic_ranger(D, 1);
   // LEDs for output of something nearby
@@ -214,6 +269,10 @@ int main (void) {
   on_off_state_t proximity_state = OFF;
   on_off_state_t turn_state = OFF;
 
+  // Set variables
+  float velocity = 0;
+  long range = 0;
+
   // Loop forever
   while (1) {
     // Determines sampling rate
@@ -224,8 +283,32 @@ int main (void) {
       nrf_gpio_pin_toggle(LEDS[i]);
     }
 
-    long range = ultrasonic_ranger_loop_call();
-    //printf("Ultrasonic ranger range: %ld\n", range);
+    // GET MEASUREMENTS AND INPUTS
+    /************************************** TURNING **************************************/
+    float x_acc, y_acc, z_acc;
+    //sample_9250_accelerometer(&x_acc, &y_acc, &z_acc);
+    // TODO: set threshold as macro
+    bool turned_left = (y_acc > 0.4), turned_right = (y_acc < -0.4);
+    // Temporary debugging for turn signal debugging (button press instead of ble button)
+    bool ble_left = false;
+    if (button_press_time > 0 && !gpio_read(28)) {
+      ble_left = true;
+      button_press_time = 0;
+    }
+    printf("timer: %i\n", button_press_time);
+    bool ble_right = false;
+    bool left_turn, right_turn = false;
+
+    /************************************** HALL EFFECT **************************************/
+    // TODO: Implement hall-effect sensors to update velocity
+    // Used to check left_turn and right_turn (i.e. tilted left/right && velocity > 0);
+    //printf("X: %f, Y: %f, Z: %f\n", x_acc, y_acc, z_acc);
+    //velocity = velocity + x_acc * 0.01;
+    //printf("Velocity: %f\n", velocity);
+
+    /************************************** PROXIMITY **************************************/
+    range = ultrasonic_ranger_loop_call();
+    printf("Ultrasonic ranger range: %ld\n", range);
 
     // STATE MACHINES
     // State machine for brake
@@ -251,14 +334,56 @@ int main (void) {
     // State machine for turn indicators
     switch(turn_state) {
       case OFF: {
+        if (ble_left) {
+          turn_state = LEFT;
+          left_turn = true;
+          turn_time_on = 0;
+        } else if (ble_right) {
+          turn_state = RIGHT;
+          right_turn = true;
+          turn_time_on = 0;
+        } else {
+          turn_state = OFF;
+          //printf("IN STATE OFF\n");
+        }
         break;
       }
       case LEFT: {
+        if (ble_left || turn_time_on > 60 || turned_left) {
+          printf("ble_left: %i, turn_time: %i, turned_left: %i\n", ble_left, turn_time_on > 60, turned_left);
+          turn_state = OFF;
+        } else if (ble_right) {
+          turn_state = RIGHT;
+          right_turn = true;
+          turn_time_on = 0;
+        } else {
+          turn_state = LEFT;
+          left_turn = true;
+          //printf("IN STATE LEFT\n");
+        }
         break;
       }
       case RIGHT: {
+        if (ble_right || turn_time_on > 60 || turned_right) {
+          turn_state = OFF;
+        } else if (ble_left) {
+          turn_state = LEFT;
+          left_turn = true;
+          turn_time_on = 0;
+        } else {
+          turn_state = RIGHT;
+          right_turn = true;
+          printf("IN STATE RIGHT\n");
+        }
         break;
       }
+    }
+
+    // Handle turn_state outputs
+    if (left_turn) {
+      // turn on left turn lights
+    } else if (right_turn) {
+      // turn on right turn lights
     }
   }
 }
