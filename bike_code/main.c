@@ -87,6 +87,7 @@ static char const m_target_periph_name[] = "TESTPERIPH";             /**< Name o
 
 uint16_t conn_handle = 0;
 ble_gatt_db_char_t* char_handles = NULL;
+uint16_t char_handle = 0;
 uint16_t num_handles = 0;
 
 /**@brief Function for handling asserts in the SoftDevice.
@@ -235,13 +236,22 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 
     switch (p_ble_evt->header.evt_id)
     {
+        case BLE_GATTC_EVT_READ_RSP:
+        {
+          ble_gattc_evt_t const * p_gattc_evt = &p_ble_evt->evt.gattc_evt;
+          ble_gattc_evt_read_rsp_t value_read = p_gattc_evt->params.read_rsp;
+
+          printf("Value len: %i\n", value_read.len);
+          printf("Values read: %d\n", value_read.data[0]);
+        } break;
         // Custom entered case: Characteristic read
         case BLE_GATTC_EVT_CHAR_VALS_READ_RSP:
         {
           ble_gattc_evt_t const * p_gattc_evt = &p_ble_evt->evt.gattc_evt;
           ble_gattc_evt_char_vals_read_rsp_t values_read = p_gattc_evt->params.char_vals_read_rsp;
 
-          printf("%x\n", values_read.values);
+          printf("Value len: %i\n", values_read.len);
+          printf("Values concat read: %s\n", values_read.values[0]);
         } break;
         // Upon connection, check which peripheral is connected, initiate DB
         // discovery, update LEDs status, and resume scanning, if necessary.
@@ -509,9 +519,10 @@ static void db_disc_handler(ble_db_discovery_evt_t * p_evt)
     }
 
     conn_handle = p_evt->conn_handle;
+    char_handle = p_evt->params.discovered_db.charateristics[3].characteristic.handle_value;
     char_handles = p_evt->params.discovered_db.charateristics;
     num_handles = p_evt->params.discovered_db.char_count;
-    printf("Conn_handle: %x\nChar_handles: %x\nNum_handles: %i\n", conn_handle, char_handles, num_handles);
+    printf("Conn_handle: %x\nChar_handles: %x\nNum_handles: %i\n", conn_handle, char_handles[2].characteristic.handle_value, num_handles);
 }
 
 
@@ -599,7 +610,7 @@ int main(void)
     {
         idle_state_handle();
         if (num_handles != 0) {
-          ret_code_t err_code = sd_ble_gattc_char_values_read(conn_handle, char_handles, num_handles);
+          ret_code_t err_code = sd_ble_gattc_read(conn_handle, char_handle, 0);
           if (err_code != NRF_ERROR_BUSY) {
             APP_ERROR_CHECK(err_code);
           }
