@@ -47,7 +47,7 @@ void ranger_timer_init()
                                 APP_TIMER_MODE_SINGLE_SHOT,
                                 ranger_timeout_handler); // don't do anything to avoid interrupts
   APP_ERROR_CHECK(err_code);
-  printf("\n\nUltrasonic Ranger timer created!\n\n");
+  printf("Ultrasonic Ranger timer created!\n");
 }
 
 // used to convert tick values to microseconds

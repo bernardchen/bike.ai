@@ -25,6 +25,9 @@
 #include "buckler.h"
 #include "display.h"
 
+// project includes
+#include "ultrasonic_ranger.h"
+
 // macros for accelerometer
 #define pi acos(-1.0)
 #define radToDeg (180.0 / pi)
@@ -147,6 +150,30 @@ void init_buckler_LEDs() {
   }
 }
 
+/**@brief Function starting the internal LFCLK oscillator.
+ *
+ * @details This is needed by RTC1 which is used by the Application Timer
+ *          (When SoftDevice is enabled the LFCLK is always running and this is not needed).
+ */
+// obtained from tutorial: 
+// https://devzone.nordicsemi.com/nordic/short-range-guides/b/software-development-kit/posts/application-timer-tutorial 
+static void lfclk_request(void)
+{
+    ret_code_t err_code = nrf_drv_clock_init();
+    APP_ERROR_CHECK(err_code);
+    nrf_drv_clock_lfclk_request(NULL);
+}
+
+/***** SHOULD BE CALLED AT THE VERY START OF MAIN SO EVERYTHING INVOLVING app_timer IS SET UP *****/
+static void set_up_app_timer(void)
+{
+  lfclk_request();
+  ret_code_t error_code = app_timer_init();
+  APP_ERROR_CHECK(error_code);
+}
+
+
+
 void sample_accel(double* x_acc, double* y_acc, double* z_acc) {
   nrf_saadc_value_t x_val = sample_value(X_CHANNEL);
   nrf_saadc_value_t y_val = sample_value(Y_CHANNEL);
@@ -174,6 +201,12 @@ int main (void) {
   init_RTT();
   init_accelerometer();
   init_buckler_LEDs();
+  set_up_app_timer();
+  /********* ultrasonic ranger stuff *********/
+  init_ultrasonic_ranger(D, 1);
+  // LEDs for output of something nearby
+  // TODO: CHANGE WHEN HAVE REAL LEDs
+  // nrf_gpio_cfg_output(BUCKLER_LED0);
   printf("Buckler initialized!\n");
 
   // State machines
@@ -184,11 +217,15 @@ int main (void) {
   // Loop forever
   while (1) {
     // Determines sampling rate
-    nrf_delay_ms(10);
+    // TODO: Figure out how to to dealsy because ultrasonic_ranger can't delay more than 1ms
+    //nrf_delay_ms(10);
 
     for (int i=0; i<3; i++) {
       nrf_gpio_pin_toggle(LEDS[i]);
     }
+
+    long range = ultrasonic_ranger_loop_call();
+    //printf("Ultrasonic ranger range: %ld\n", range);
 
     // STATE MACHINES
     // State machine for brake
