@@ -344,7 +344,7 @@ int main (void) {
           turn_time_on = 0;
         } else {
           turn_state = OFF;
-          //printf("IN STATE OFF\n");
+          printf("IN STATE OFF\n");
         }
         break;
       }
@@ -359,7 +359,7 @@ int main (void) {
         } else {
           turn_state = LEFT;
           left_turn = true;
-          //printf("IN STATE LEFT\n");
+          printf("IN STATE LEFT\n");
         }
         break;
       }
