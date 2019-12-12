@@ -68,6 +68,8 @@
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
 
+#include "nrf_delay.h"
+
 #define APP_BLE_CONN_CFG_TAG      1                                     /**< Tag that refers to the BLE stack configuration that is set with @ref sd_ble_cfg_set. The default tag is @ref APP_BLE_CONN_CFG_TAG. */
 #define APP_BLE_OBSERVER_PRIO     3                                     /**< BLE observer priority of the application. There is no need to modify this value. */
 
@@ -238,6 +240,10 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 
     switch (p_ble_evt->header.evt_id)
     {
+        case BLE_GATTC_EVT_WRITE_RSP:
+        {
+            printf("WRITTEN!\n");
+        } break;
         case BLE_GATTC_EVT_READ_RSP:
         {
           ble_gattc_evt_t const * p_gattc_evt = &p_ble_evt->evt.gattc_evt;
@@ -245,6 +251,21 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 
           printf("Value len: %i\n", value_read.len);
           printf("Values read: %d\n", value_read.data[0]);
+          int button_press_data = value_read.data[0];
+            if (button_press_data == 1) {
+                printf("BUTTON PRESS DETECTED!!!\n");
+                ble_gattc_write_params_t write_params;
+                uint8_t EnableNotification[1] = {0x00};       
+
+                write_params.write_op = BLE_GATT_OP_WRITE_REQ;                      
+                write_params.handle   = char_handle;             
+                write_params.offset   = 0;                                                          
+                write_params.len      = 1;                                                              
+                write_params.p_value  = EnableNotification;                                                 
+                
+                ret_code_t err_code = sd_ble_gattc_write(conn_handle, &write_params);
+                APP_ERROR_CHECK(err_code);
+            }
         } break;
         // Custom entered case: Characteristic read
         case BLE_GATTC_EVT_CHAR_VALS_READ_RSP:
@@ -281,7 +302,7 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             // APP_ERROR_CHECK(err_code);
 
             btn_uuid.type = BLE_UUID_TYPE_BLE;
-            btn_uuid.uuid = 0xffe0;//0xeda0;
+            btn_uuid.uuid = 0xffe0;//0x1802;//(itag button press char) 0xffe0;//(flic buttons?) 0xeda0;
             err_code = ble_db_discovery_evt_register(&btn_uuid);
             APP_ERROR_CHECK(err_code);
 
@@ -522,12 +543,16 @@ static void db_disc_handler(ble_db_discovery_evt_t * p_evt)
     }
 
     conn_handle = p_evt->conn_handle;
-    char_handle = p_evt->params.discovered_db.charateristics[3].characteristic.handle_value;
+    char_handle = p_evt->params.discovered_db.charateristics[0].characteristic.handle_value;
     char_handles = p_evt->params.discovered_db.charateristics;
     num_handles = p_evt->params.discovered_db.char_count;
-    printf("Conn_handle: %x\nChar_handles: %x\nNum_handles: %i\n", conn_handle, char_handles[3].characteristic.handle_value, num_handles);
+    printf("Conn_handle: %x\nChar_handles: %x\nNum_handles: %i\n", conn_handle, char_handles[0].characteristic.handle_value, num_handles);
 
     // printf("Enabling notifications\n");
+
+    // if (char_handles[3].cccd_handle == BLE_GATT_HANDLE_INVALID) {
+    //     printf("INVALIDDDDDD\n");
+    // }
 
     // ble_gattc_write_params_t write_params;
     // write_params.write_op = BLE_GATT_OP_WRITE_CMD;
@@ -535,12 +560,27 @@ static void db_disc_handler(ble_db_discovery_evt_t * p_evt)
     // write_params.handle = p_evt->params.discovered_db.charateristics[3].cccd_handle;
     // write_params.offset = 0;
     // write_params.len = 1;
-    // int write_value = 0x01;
+    // uint8_t write_value = 0x1;
     // write_params.p_value = &write_value;
-    // ret_code_t err_code = sd_ble_gattc_write(conn_handle, &write_params);   
-    // if (err_code != NRF_ERROR_BUSY) {
-    //     APP_ERROR_CHECK(err_code);
-    // }
+
+    // printf("cccd handle: %x\n", char_handles[3].cccd_handle);
+
+    // ble_gattc_write_params_t write_params;
+    // uint8_t EnableNotification[2] = {0x01, 0x00};       
+
+    // write_params.write_op = BLE_GATT_OP_WRITE_REQ;                      
+    // write_params.handle   = char_handles[3].cccd_handle;             
+    // write_params.offset   = 0;                                                          
+    // write_params.len      = 2;                                                              
+    // write_params.p_value  = EnableNotification;                                                 
+    
+    // ret_code_t err_code = sd_ble_gattc_write(conn_handle, &write_params);
+    // printf("PRINTING NOTIF CHAR:\n");
+    // ret_code_t err_code = sd_ble_gattc_read(conn_handle, char_handles[3].cccd_handle, 0);
+    // APP_ERROR_CHECK(err_code);
+    // ret_code_t err_code = sd_ble_gattc_write(conn_handle, &write_params);
+    // ret_code_t err_code = sd_ble_gattc_write(conn_handle, &write_params);
+    // APP_ERROR_CHECK(err_code);
 }
 
 
@@ -627,11 +667,30 @@ int main(void)
     for (;;)
     {
         idle_state_handle();
+
+        // CODE TO READ CHARARACTERISTIC
         if (num_handles != 0) {
           ret_code_t err_code = sd_ble_gattc_read(conn_handle, char_handle, 0);
           if (err_code != NRF_ERROR_BUSY) {
             APP_ERROR_CHECK(err_code);
           }
         }
+
+        // CODE TO WRITE CHARACTERISTIC
+        // if (num_handles != 0) {
+        //     printf("waiting 5 seconds...\n");
+        //     nrf_delay_ms(5000);
+        //     ble_gattc_write_params_t write_params;
+        //     uint8_t EnableNotification[1] = {0x01};       
+
+        //     write_params.write_op = BLE_GATT_OP_WRITE_REQ;                      
+        //     write_params.handle   = char_handle;             
+        //     write_params.offset   = 0;                                                          
+        //     write_params.len      = 1;                                                              
+        //     write_params.p_value  = EnableNotification;                                                 
+            
+        //     ret_code_t err_code = sd_ble_gattc_write(conn_handle, &write_params);
+        //     APP_ERROR_CHECK(err_code);
+        // }
     }
 }
