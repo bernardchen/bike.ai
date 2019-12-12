@@ -29,6 +29,7 @@ uint32_t current_pin_num = 0; // the pin that is currently being used to poll
 // and we want to restart measurement.
 // otherwise for normal switching, we should do it before the timer ends
 #define RANGER_TIMEOUT (12) // 20 milli seconds
+							// this timeout gives about max 200cm
 
 // gets called when timer runs out and doesn't transition states as expected.
 // will move to switch_to_output

@@ -40,7 +40,8 @@ void init_ultrasonic_ranger(buckler_port_t left_port, buckler_port_t right_port,
 // These functions will return the distance measured by the ultrasonic ranger.
 // It will go through the entire process of switching it to output, and
 // then switching to input, and do all the calculations.
-// Will take 20 millisecond max to run. Timeout set to that to avoid taking too long to poll
+// Will take 12 millisecond max to run per side. Timeout set to that to avoid taking too long to poll
+// This means in standard polling of both sides, the delay will be about 30 seconds.
 // Distance can be measured up to a max of 200cm.
 // Any range greater than that will be considered 600 (timeout)
 // It may also be 600 if for some reason, there is a timeout
