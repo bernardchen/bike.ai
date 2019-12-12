@@ -273,11 +273,15 @@ int main (void) {
   float velocity = 0;
   long range = 0;
 
+  // variable just for proximity sensor so that false reads don't change 
+  uint16_t num_in_a_row = 0;
+
   // Loop forever
   while (1) {
     // Determines sampling rate
     // TODO: Figure out how to to dealsy because ultrasonic_ranger can't delay more than 1ms
-    //nrf_delay_ms(10);
+  	uint32_t start_count = app_timer_cnt_get();
+  	nrf_delay_ms(1);
 
     for (int i=0; i<3; i++) {
       nrf_gpio_pin_toggle(LEDS[i]);
@@ -286,11 +290,7 @@ int main (void) {
     // GET MEASUREMENTS AND INPUTS
     /************************************** TURNING **************************************/
     float x_acc, y_acc, z_acc;
-    uint32_t start_count = app_timer_cnt_get();
     sample_9250_accelerometer(&x_acc, &y_acc, &z_acc);
-    uint32_t end_count = app_timer_cnt_get();
-    uint32_t time_microsec = app_timer_ticks_to_usec(end_count - start_count);
-    printf("Time to run accelerometer: %d\n", time_microsec);
     // TODO: set threshold as macro
     bool turned_left = (y_acc > 0.4), turned_right = (y_acc < -0.4);
     // Temporary debugging for turn signal debugging (button press instead of ble button)
@@ -311,11 +311,7 @@ int main (void) {
     //printf("Velocity: %f\n", velocity);
 
     /************************************** PROXIMITY **************************************/
-    start_count = app_timer_cnt_get();
     range = ultrasonic_ranger_get_distance_cm();
-    end_count = app_timer_cnt_get();
-    time_microsec = app_timer_ticks_to_usec(end_count - start_count);
-    printf("Time to run ULTRASONIC: %d\n", time_microsec);
     printf("Ultrasonic ranger range: %ld\n", range);
 
     // STATE MACHINES
@@ -330,11 +326,42 @@ int main (void) {
     }
 
     // State machine for proximity sensors
+    // will only change if there are 5 times in a row
     switch(proximity_state) {
       case OFF: {
+      	if (range <= 250)
+      	{
+      		num_in_a_row += 1;
+
+      	}
+      	else
+      	{
+      		num_in_a_row = 0;
+      	}
+
+      	if (num_in_a_row >= 4 && range <= 250) // already happened 4 times and fifth is also true
+      	{
+      		num_in_a_row = 0;
+      		proximity_state = ON;
+      		turn_on_left_proxi_led();
+      	}	
         break;
       }
       case ON: {
+      	if (range > 250)
+      	{
+      		num_in_a_row += 1;
+      	}
+      	else
+      	{
+      		num_in_a_row = 0;
+      	}
+      	if (num_in_a_row >= 4 && range > 250)
+      	{
+      		num_in_a_row = 0;
+      		proximity_state = OFF;
+      		turn_off_left_proxi_led();
+      	}
         break;
       }
     }
@@ -393,5 +420,9 @@ int main (void) {
     } else if (right_turn) {
       // turn on right turn lights
     }
+
+    uint32_t end_count = app_timer_cnt_get();
+    uint32_t time_microsec = app_timer_ticks_to_usec(end_count - start_count);
+    printf("Time to run loop: %d\n", time_microsec);
   }
 }
