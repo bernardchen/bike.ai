@@ -83,7 +83,8 @@ NRF_BLE_GATT_DEF(m_gatt);                                               /**< GAT
 BLE_DB_DISCOVERY_ARRAY_DEF(m_db_disc, NRF_SDH_BLE_CENTRAL_LINK_COUNT);  /**< Database discovery module instances. */
 NRF_BLE_SCAN_DEF(m_scan);                                               /**< Scanning Module instance. */
 
-static char const m_target_periph_name[] = "TESTPERIPH";             /**< Name of the device to try to connect to. This name is searched for in the scanning report data. */
+static char const m_target_periph_name[] = "iTAG            ";             /**< Name of the device to try to connect to. This name is searched for in the scanning report data. */
+static char const test_periph_addr[] = {0x95, 0x82, 0x0e, 0x00, 0xff, 0xff};
 
 uint16_t conn_handle = 0;
 ble_gatt_db_char_t* char_handles = NULL;
@@ -231,6 +232,7 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 {
     ret_code_t err_code;
 
+    //printf("%s\n", p_ble_evt->evt.gap_evt.params.adv_report.data);
     // For readability.
     ble_gap_evt_t const * p_gap_evt = &p_ble_evt->evt.gap_evt;
 
@@ -274,11 +276,12 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             // Trying to use db_discovery
             //==================================
             ble_uuid_t btn_uuid;
-            ble_uuid128_t base_uuid = {{0xca,0xa4,0x87,0x0d,0x42,0x84,0xff,0xA9,0x59,0x4D,0x5e,0xf6,0xa0,0xed,0x07,0x46}};
-            err_code = sd_ble_uuid_vs_add(&base_uuid, &btn_uuid.type);
-            APP_ERROR_CHECK(err_code);
+            // ble_uuid128_t base_uuid = {{0xca,0xa4,0x87,0x0d,0x42,0x84,0xff,0xA9,0x59,0x4D,0x5e,0xf6,0xa0,0xed,0x07,0x46}};
+            // err_code = sd_ble_uuid_vs_add(&base_uuid, &btn_uuid.type);
+            // APP_ERROR_CHECK(err_code);
 
-            btn_uuid.uuid = 0xeda0;
+            btn_uuid.type = BLE_UUID_TYPE_BLE;
+            btn_uuid.uuid = 0xffe0;//0xeda0;
             err_code = ble_db_discovery_evt_register(&btn_uuid);
             APP_ERROR_CHECK(err_code);
 
@@ -522,7 +525,22 @@ static void db_disc_handler(ble_db_discovery_evt_t * p_evt)
     char_handle = p_evt->params.discovered_db.charateristics[3].characteristic.handle_value;
     char_handles = p_evt->params.discovered_db.charateristics;
     num_handles = p_evt->params.discovered_db.char_count;
-    printf("Conn_handle: %x\nChar_handles: %x\nNum_handles: %i\n", conn_handle, char_handles[2].characteristic.handle_value, num_handles);
+    printf("Conn_handle: %x\nChar_handles: %x\nNum_handles: %i\n", conn_handle, char_handles[3].characteristic.handle_value, num_handles);
+
+    // printf("Enabling notifications\n");
+
+    // ble_gattc_write_params_t write_params;
+    // write_params.write_op = BLE_GATT_OP_WRITE_CMD;
+    // write_params.flags = BLE_GATT_EXEC_WRITE_FLAG_PREPARED_WRITE;
+    // write_params.handle = p_evt->params.discovered_db.charateristics[3].cccd_handle;
+    // write_params.offset = 0;
+    // write_params.len = 1;
+    // int write_value = 0x01;
+    // write_params.p_value = &write_value;
+    // ret_code_t err_code = sd_ble_gattc_write(conn_handle, &write_params);   
+    // if (err_code != NRF_ERROR_BUSY) {
+    //     APP_ERROR_CHECK(err_code);
+    // }
 }
 
 
