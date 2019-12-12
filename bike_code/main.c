@@ -258,7 +258,7 @@ int main (void) {
   init_main_timer();
   init_button0();
   /********* ultrasonic ranger stuff *********/
-  init_ultrasonic_ranger(D, 1);
+  init_ultrasonic_ranger(A, D, 1);
   // LEDs for output of something nearby
   // TODO: CHANGE WHEN HAVE REAL LEDs
   // nrf_gpio_cfg_output(BUCKLER_LED0);
@@ -271,7 +271,8 @@ int main (void) {
 
   // Set variables
   float velocity = 0;
-  long range = 0;
+  long left_range = 0;
+  long right_range = 0;
 
   // variable just for proximity sensor so that false reads don't change 
   uint16_t num_in_a_row = 0;
@@ -311,8 +312,10 @@ int main (void) {
     //printf("Velocity: %f\n", velocity);
 
     /************************************** PROXIMITY **************************************/
-    range = ultrasonic_ranger_get_distance_cm();
-    printf("Ultrasonic ranger range: %ld\n", range);
+    left_range = ultrasonic_get_left_distance_cm();
+    right_range = ultrasonic_get_right_distance_cm();
+    printf("Ultrasonic LEFT ranger range: %ld\n", left_range);
+    printf("Ultrasonic RIGHT ranger range: %ld\n", right_range);
 
     // STATE MACHINES
     // State machine for brake
@@ -329,7 +332,7 @@ int main (void) {
     // will only change if there are 5 times in a row
     switch(proximity_state) {
       case OFF: {
-      	if (range <= 250)
+      	if (left_range <= 250)
       	{
       		num_in_a_row += 1;
 
@@ -339,7 +342,7 @@ int main (void) {
       		num_in_a_row = 0;
       	}
 
-      	if (num_in_a_row >= 4 && range <= 250) // already happened 4 times and fifth is also true
+      	if (num_in_a_row >= 4 && left_range <= 250) // already happened 4 times and fifth is also true
       	{
       		num_in_a_row = 0;
       		proximity_state = ON;
@@ -348,7 +351,7 @@ int main (void) {
         break;
       }
       case ON: {
-      	if (range > 250)
+      	if (left_range > 250)
       	{
       		num_in_a_row += 1;
       	}
@@ -356,7 +359,7 @@ int main (void) {
       	{
       		num_in_a_row = 0;
       	}
-      	if (num_in_a_row >= 4 && range > 250)
+      	if (num_in_a_row >= 4 && left_range > 250)
       	{
       		num_in_a_row = 0;
       		proximity_state = OFF;

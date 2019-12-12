@@ -16,8 +16,12 @@ uint32_t timer_start_rtc = 0; // rtc counter value when timer started
 uint32_t timer_val = 0; // used to measure time for
 						// output timing and input timeout
 // represents which buckler port we're using
-buckler_port_t ranger_port = D; // the enum
-uint32_t ranger_port_pin_num = BUCKLER_GROVE_D0; // the actual pin number
+buckler_port_t right_ranger_port = D; // the enum
+uint32_t right_ranger_port_pin_num = BUCKLER_GROVE_D0; // the actual pin number
+buckler_port_t left_ranger_port = A; // the enum
+uint32_t left_ranger_port_pin_num = BUCKLER_GROVE_A0; // the actual pin number
+
+uint32_t current_pin_num = 0; // the pin that is currently being used to poll
 
 
 /************* TIMER STUFF *************/
@@ -37,6 +41,7 @@ static void ranger_timeout_handler(void * p_context)
 	range = 600;
 }
 
+// ONE timer used for both since they're polled one at a time
 APP_TIMER_DEF(ranger_timer);
 // this only needs to be called once
 void ranger_timer_init()
@@ -90,27 +95,27 @@ uint32_t ranger_get_time_usec()
 /**** set input/output ****/
 void set_ranger_to_input()
 {
-	nrf_gpio_cfg_input(ranger_port_pin_num,NRF_GPIO_PIN_NOPULL);			
+	nrf_gpio_cfg_input(current_pin_num, NRF_GPIO_PIN_NOPULL);			
 }
 void set_ranger_to_output()
 {
-	nrf_gpio_cfg_output(ranger_port_pin_num);
+	nrf_gpio_cfg_output(current_pin_num);
 }
 
 /**** change outputs ****/
 void ranger_disable_output()
 {
-	nrf_gpio_pin_clear(ranger_port_pin_num);
+	nrf_gpio_pin_clear(current_pin_num);
 }
 void ranger_enable_output()
 {
-	nrf_gpio_pin_set(ranger_port_pin_num);
+	nrf_gpio_pin_set(current_pin_num);
 }
 
 // get input value
 uint32_t ranger_get_input()
 {
-	return nrf_gpio_pin_read(ranger_port_pin_num);
+	return nrf_gpio_pin_read(current_pin_num);
 }
 
 
@@ -118,149 +123,215 @@ uint32_t ranger_get_input()
 // port is whether the A or D port on the buckler is being used
 // initLEDs is whether or not to init the hardcoded LEDs too
 	// 0 is don't init, any other value is
-void init_ultrasonic_ranger(buckler_port_t port, uint32_t initLEDs)
+void init_ultrasonic_ranger(buckler_port_t left_port, buckler_port_t right_port, uint32_t initLEDs)
 {
 	if (initLEDs)
 	{
 		init_proxi_leds();
 	}
 
-	ranger_port = port;
-	switch (ranger_port)
+	// A1/D1 is not used by this sensor
+	left_ranger_port = left_port;
+	switch (left_ranger_port)
 	{
 		case A:
 		{
-			ranger_port_pin_num = BUCKLER_GROVE_A0;
+			left_ranger_port_pin_num = BUCKLER_GROVE_A0;
 			break;
 		}
 		case D:
 		{
-			ranger_port_pin_num = BUCKLER_GROVE_D0;
+			left_ranger_port_pin_num = BUCKLER_GROVE_D0;
+			break;
+		}
+		case UNUSED:
+		{
+			left_ranger_port_pin_num = 0;
 			break;
 		}
 	}
 
-	// A1/D1 is not used by this sensor
-	set_ranger_to_output();
+	right_ranger_port = right_port;
+	switch(right_ranger_port)
+	{
+		case A:
+		{
+			right_ranger_port_pin_num = BUCKLER_GROVE_A0;
+			break;
+		}
+		case D:
+		{
+			right_ranger_port_pin_num = BUCKLER_GROVE_D0;
+			break;
+		}
+		case UNUSED:
+		{
+			right_ranger_port_pin_num = 0;
+			break;
+		}
+	}
+
+
+	// set left to output
+	if (left_ranger_port_pin_num != 0)
+	{
+		current_pin_num = left_ranger_port_pin_num;
+		set_ranger_to_output();
+	}
+	// set right to output
+	if (right_ranger_port_pin_num != 0)
+	{
+		current_pin_num = right_ranger_port_pin_num;
+		set_ranger_to_output();
+	}
 
 	ranger_timer_init();
 }
 
 
+// this should be PRIVATE
 // call to calculate the distance
-long ultrasonic_ranger_get_distance_cm()
+// use 1 for left, 0 for right
+long ultrasonic_ranger_get_distance_cm(uint32_t isLeft)
 {
+	if (isLeft == 1 && left_ranger_port_pin_num != 0)
+	{
+		current_pin_num = left_ranger_port_pin_num;
+	}
+	else if (isLeft == 0 && right_ranger_port_pin_num != 0)
+	{
+		current_pin_num = right_ranger_port_pin_num;
+	}
+	else
+	{
+		current_pin_num = 0;
+		range = 600;
+	}
 	// get timer value
 
-	bool continue_loop = true;
-
-	while (continue_loop)
+	if (current_pin_num != 0)
 	{
-		switch (ranger_state)
+		bool continue_loop = true;
+
+		while (continue_loop)
 		{
-			case SWITCH_TO_OUTPUT:
+			switch (ranger_state)
 			{
-				set_ranger_to_output();
-
-				// set to low and start timer
-				ranger_disable_output();
-				ranger_timer_start();
-
-				ranger_state = FIRST_LOW;
-				break;
-			}
-
-			case FIRST_LOW:
-			{
-				// wait until timer is 2
-				timer_val = ranger_get_time_usec();
-				if (timer_val >= 2)
+				case SWITCH_TO_OUTPUT:
 				{
-					ranger_timer_stop();
+					set_ranger_to_output();
 
-					// set to high and start timer
-					ranger_enable_output();
-					ranger_timer_start();
-
-					ranger_state = SEND_OUT_SIGNAL;	
-				}
-				break;
-			}
-
-			case SEND_OUT_SIGNAL:
-			{
-				timer_val = ranger_get_time_usec();
-				if (timer_val >= 5)
-				{
-					// set to low and swich to input
-					ranger_timer_stop();
+					// set to low and start timer
 					ranger_disable_output();
-
-					set_ranger_to_input();
 					ranger_timer_start();
 
-					ranger_state = WAIT_FOR_PREV_END;
+					ranger_state = FIRST_LOW;
+					break;
 				}
-				break;
-			}
 
-			case WAIT_FOR_PREV_END:
-			{
-				// wait unti low
-				if (!ranger_get_input())
+				case FIRST_LOW:
 				{
-					ranger_timer_stop();
-					ranger_state = WAIT_FOR_START;	
-					ranger_timer_start();
-				}
-				break;
-			}
+					// wait until timer is 2
+					timer_val = ranger_get_time_usec();
+					if (timer_val >= 2)
+					{
+						ranger_timer_stop();
 
-			case WAIT_FOR_START:
-			{
-				// wait until high
-				if (ranger_get_input())
+						// set to high and start timer
+						ranger_enable_output();
+						ranger_timer_start();
+
+						ranger_state = SEND_OUT_SIGNAL;	
+					}
+					break;
+				}
+
+				case SEND_OUT_SIGNAL:
 				{
-					ranger_timer_stop();
-					ranger_state = WAIT_FOR_END;
-					// start time is automatically set with ranger_timer_start()
-					ranger_timer_start();
-				}
-				break;
-			}
+					timer_val = ranger_get_time_usec();
+					if (timer_val >= 5)
+					{
+						// set to low and swich to input
+						ranger_timer_stop();
+						ranger_disable_output();
 
-			case WAIT_FOR_END:
-			{
-				// wait until low
-				if (!ranger_get_input())
+						set_ranger_to_input();
+						ranger_timer_start();
+
+						ranger_state = WAIT_FOR_PREV_END;
+					}
+					break;
+				}
+
+				case WAIT_FOR_PREV_END:
 				{
-					duration = ranger_get_time_usec();
-					ranger_timer_stop();
-					ranger_state = CALCULATE_DISTANCE;
+					// wait unti low
+					if (!ranger_get_input())
+					{
+						ranger_timer_stop();
+						ranger_state = WAIT_FOR_START;	
+						ranger_timer_start();
+					}
+					break;
 				}
-				break;
-			}
 
-			case CALCULATE_DISTANCE:
-			{
-				ranger_state = SWITCH_TO_OUTPUT;
-				range = duration / 29 / 2;
-				continue_loop = false;
-				break;
-			}
-			case ERROR:
-			{
-				ranger_state = SWITCH_TO_OUTPUT;
-				set_ranger_to_output();
-				ranger_disable_output();
-				ranger_timer_stop();
-				continue_loop = false;
-				break;
+				case WAIT_FOR_START:
+				{
+					// wait until high
+					if (ranger_get_input())
+					{
+						ranger_timer_stop();
+						ranger_state = WAIT_FOR_END;
+						// start time is automatically set with ranger_timer_start()
+						ranger_timer_start();
+					}
+					break;
+				}
+
+				case WAIT_FOR_END:
+				{
+					// wait until low
+					if (!ranger_get_input())
+					{
+						duration = ranger_get_time_usec();
+						ranger_timer_stop();
+						ranger_state = CALCULATE_DISTANCE;
+					}
+					break;
+				}
+
+				case CALCULATE_DISTANCE:
+				{
+					ranger_state = SWITCH_TO_OUTPUT;
+					range = duration / 29 / 2;
+					continue_loop = false;
+					break;
+				}
+				case ERROR:
+				{
+					ranger_state = SWITCH_TO_OUTPUT;
+					set_ranger_to_output();
+					ranger_disable_output();
+					ranger_timer_stop();
+					continue_loop = false;
+					break;
+				}
 			}
 		}
 	}
+	
 
 	return range;
+}
+
+// ACTUALLY FUNCTIONS TO CALL
+long ultrasonic_get_left_distance_cm()
+{
+	return ultrasonic_ranger_get_distance_cm(1);
+}
+long ultrasonic_get_right_distance_cm()
+{
+	return ultrasonic_ranger_get_distance_cm(0);
 }
 
 

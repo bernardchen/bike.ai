@@ -31,18 +31,22 @@ typedef enum {
 // for the ultrasonic ranger
 typedef enum {
 	A,
-	D
+	D,
+	UNUSED
 } buckler_port_t;
 
-void init_ultrasonic_ranger(buckler_port_t port, uint32_t initLEDs);
+void init_ultrasonic_ranger(buckler_port_t left_port, buckler_port_t right_port, uint32_t initLEDs);
 
-// This function will return the distance measured by the ultrasonic ranger.
+// These functions will return the distance measured by the ultrasonic ranger.
 // It will go through the entire process of switching it to output, and
 // then switching to input, and do all the calculations.
-// May take about a millisecond or two to fully run.
+// Will take 20 millisecond max to run. Timeout set to that to avoid taking too long to poll
+// Distance can be measured up to a max of 200cm.
+// Any range greater than that will be considered 600 (timeout)
 // It may also be 600 if for some reason, there is a timeout
 // when trying to obtain the distance.
-long ultrasonic_ranger_get_distance_cm();
+long ultrasonic_get_left_distance_cm();
+long ultrasonic_get_right_distance_cm();
 
 
 /************ PROXIMITY WARNING LED WRAPPERS ************/
