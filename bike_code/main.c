@@ -43,6 +43,10 @@
 #define Y_CHANNEL 1
 #define Z_CHANNEL 2
 
+// ultrasonic ranger proximity constants
+#define LOOP_HOLD_AMOUNT (9) // number of loops that a ultrasonic ranger needs to be held for it to change
+#define DIST_THRESHOLD (250) // the distance an object has to be within to turn on the sensor (in cm)
+
 // Create timer
 APP_TIMER_DEF(main_timer);
 
@@ -266,7 +270,8 @@ int main (void) {
 
   // State machines
   on_off_state_t brake_state = OFF;
-  on_off_state_t proximity_state = OFF;
+  on_off_state_t left_proximity_state = OFF;
+  on_off_state_t right_proximity_state = OFF;
   on_off_state_t turn_state = OFF;
 
   // Set variables
@@ -275,7 +280,8 @@ int main (void) {
   long right_range = 0;
 
   // variable just for proximity sensor so that false reads don't change 
-  uint16_t num_in_a_row = 0;
+  uint16_t num_in_a_row_left = 0;
+  uint16_t num_in_a_row_right = 0;
 
   // Loop forever
   while (1) {
@@ -329,41 +335,79 @@ int main (void) {
     }
 
     // State machine for proximity sensors
-    // will only change if there are 5 times in a row
-    switch(proximity_state) {
+    // will only change if there are LOOP_HOLD_AMOUNT times in a row
+    switch(left_proximity_state) {
       case OFF: {
       	if (left_range <= 250)
       	{
-      		num_in_a_row += 1;
+      		num_in_a_row_left += 1;
 
       	}
       	else
       	{
-      		num_in_a_row = 0;
+      		num_in_a_row_left = 0;
       	}
 
-      	if (num_in_a_row >= 4 && left_range <= 250) // already happened 4 times and fifth is also true
+      	if (num_in_a_row_left >= LOOP_HOLD_AMOUNT && left_range <= DIST_THRESHOLD) // already happened 4 times and fifth is also true
       	{
-      		num_in_a_row = 0;
-      		proximity_state = ON;
+      		num_in_a_row_left = 0;
+      		left_proximity_state = ON;
       		turn_on_left_proxi_led();
       	}	
         break;
       }
       case ON: {
-      	if (left_range > 250)
+      	if (left_range > DIST_THRESHOLD)
       	{
-      		num_in_a_row += 1;
+      		num_in_a_row_left += 1;
       	}
       	else
       	{
-      		num_in_a_row = 0;
+      		num_in_a_row_left = 0;
       	}
-      	if (num_in_a_row >= 4 && left_range > 250)
+      	if (num_in_a_row_left >= LOOP_HOLD_AMOUNT && left_range > DIST_THRESHOLD)
       	{
-      		num_in_a_row = 0;
-      		proximity_state = OFF;
+      		num_in_a_row_left = 0;
+      		left_proximity_state = OFF;
       		turn_off_left_proxi_led();
+      	}
+        break;
+      }
+    }
+    switch(right_proximity_state) {
+      case OFF: {
+      	if (right_range <= 250)
+      	{
+      		num_in_a_row_right += 1;
+
+      	}
+      	else
+      	{
+      		num_in_a_row_right = 0;
+      	}
+
+      	if (num_in_a_row_right >= LOOP_HOLD_AMOUNT && right_range <= DIST_THRESHOLD) // already happened 4 times and fifth is also true
+      	{
+      		num_in_a_row_right = 0;
+      		right_proximity_state = ON;
+      		turn_on_right_proxi_led();
+      	}	
+        break;
+      }
+      case ON: {
+      	if (right_range > DIST_THRESHOLD)
+      	{
+      		num_in_a_row_right += 1;
+      	}
+      	else
+      	{
+      		num_in_a_row_right = 0;
+      	}
+      	if (num_in_a_row_right >= LOOP_HOLD_AMOUNT && right_range > DIST_THRESHOLD)
+      	{
+      		num_in_a_row_right = 0;
+      		right_proximity_state = OFF;
+      		turn_off_right_proxi_led();
       	}
         break;
       }
