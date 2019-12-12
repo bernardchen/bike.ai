@@ -255,13 +255,13 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             if (button_press_data == 1) {
                 printf("BUTTON PRESS DETECTED!!!\n");
                 ble_gattc_write_params_t write_params;
-                uint8_t EnableNotification[1] = {0x00};       
+                uint8_t  value_to_write[1] = {0x00};       
 
                 write_params.write_op = BLE_GATT_OP_WRITE_REQ;                      
                 write_params.handle   = char_handle;             
                 write_params.offset   = 0;                                                          
                 write_params.len      = 1;                                                              
-                write_params.p_value  = EnableNotification;                                                 
+                write_params.p_value  = value_to_write;                                                 
                 
                 ret_code_t err_code = sd_ble_gattc_write(conn_handle, &write_params);
                 APP_ERROR_CHECK(err_code);
