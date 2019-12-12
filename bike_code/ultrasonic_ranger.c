@@ -21,17 +21,18 @@ uint32_t ranger_port_pin_num = BUCKLER_GROVE_D0; // the actual pin number
 
 
 /************* TIMER STUFF *************/
-// always set the timer to 1000 so if it's ever called, something went wrong
+// always set the timer to 20 so if it's ever called, something went wrong
 // and we want to restart measurement.
 // otherwise for normal switching, we should do it before the timer ends
-#define RANGER_TIMEOUT (1000) // 1 second
+#define RANGER_TIMEOUT (20) // 20 milli seconds
 
 // gets called when timer runs out and doesn't transition states as expected.
 // will move to switch_to_output
 static void ranger_timeout_handler(void * p_context)
 {
 	// if timer actually times out, then we reset and go back to output mode
-	ranger_state = SWITCH_TO_OUTPUT;
+	// and then return from the function
+	ranger_state = ERROR;
 	// also set range to 0
 	range = 600;
 }
@@ -146,103 +147,116 @@ void init_ultrasonic_ranger(buckler_port_t port, uint32_t initLEDs)
 }
 
 
-// THE loop cool that gets called every loop in main
-long ultrasonic_ranger_loop_call()
+// call to calculate the distance
+long ultrasonic_ranger_get_distance_cm()
 {
 	// get timer value
 
+	bool continue_loop = true;
 
-	switch (ranger_state)
+	while (continue_loop)
 	{
-		case SWITCH_TO_OUTPUT:
+		switch (ranger_state)
 		{
-			set_ranger_to_output();
-
-			// set to low and start timer
-			ranger_disable_output();
-			ranger_timer_start();
-
-			ranger_state = FIRST_LOW;
-			break;
-		}
-
-		case FIRST_LOW:
-		{
-			// wait until timer is 2
-			timer_val = ranger_get_time_usec();
-			if (timer_val >= 2)
+			case SWITCH_TO_OUTPUT:
 			{
-				ranger_timer_stop();
+				set_ranger_to_output();
 
-				// set to high and start timer
-				ranger_enable_output();
-				ranger_timer_start();
-
-				ranger_state = SEND_OUT_SIGNAL;	
-			}
-			break;
-		}
-
-		case SEND_OUT_SIGNAL:
-		{
-			timer_val = ranger_get_time_usec();
-			if (timer_val >= 5)
-			{
-				// set to low and swich to input
-				ranger_timer_stop();
+				// set to low and start timer
 				ranger_disable_output();
-
-				set_ranger_to_input();
 				ranger_timer_start();
 
-				ranger_state = WAIT_FOR_PREV_END;
+				ranger_state = FIRST_LOW;
+				break;
 			}
-			break;
-		}
 
-		case WAIT_FOR_PREV_END:
-		{
-			// wait unti low
-			if (!ranger_get_input())
+			case FIRST_LOW:
 			{
-				ranger_timer_stop();
-				ranger_state = WAIT_FOR_START;	
-				ranger_timer_start();
-			}
-			break;
-		}
+				// wait until timer is 2
+				timer_val = ranger_get_time_usec();
+				if (timer_val >= 2)
+				{
+					ranger_timer_stop();
 
-		case WAIT_FOR_START:
-		{
-			// wait until high
-			if (ranger_get_input())
+					// set to high and start timer
+					ranger_enable_output();
+					ranger_timer_start();
+
+					ranger_state = SEND_OUT_SIGNAL;	
+				}
+				break;
+			}
+
+			case SEND_OUT_SIGNAL:
 			{
-				ranger_timer_stop();
-				ranger_state = WAIT_FOR_END;
-				// start time is automatically set with ranger_timer_start()
-				ranger_timer_start();
-			}
-			break;
-		}
+				timer_val = ranger_get_time_usec();
+				if (timer_val >= 5)
+				{
+					// set to low and swich to input
+					ranger_timer_stop();
+					ranger_disable_output();
 
-		case WAIT_FOR_END:
-		{
-			// wait until low
-			if (!ranger_get_input())
+					set_ranger_to_input();
+					ranger_timer_start();
+
+					ranger_state = WAIT_FOR_PREV_END;
+				}
+				break;
+			}
+
+			case WAIT_FOR_PREV_END:
 			{
-				duration = ranger_get_time_usec();
-				ranger_timer_stop();
-				ranger_state = CALCULATE_DISTANCE;
+				// wait unti low
+				if (!ranger_get_input())
+				{
+					ranger_timer_stop();
+					ranger_state = WAIT_FOR_START;	
+					ranger_timer_start();
+				}
+				break;
 			}
-			break;
-		}
 
-		case CALCULATE_DISTANCE:
-		{
-			ranger_state = SWITCH_TO_OUTPUT;
-			range = duration / 29 / 2;
+			case WAIT_FOR_START:
+			{
+				// wait until high
+				if (ranger_get_input())
+				{
+					ranger_timer_stop();
+					ranger_state = WAIT_FOR_END;
+					// start time is automatically set with ranger_timer_start()
+					ranger_timer_start();
+				}
+				break;
+			}
 
-			break;
+			case WAIT_FOR_END:
+			{
+				// wait until low
+				if (!ranger_get_input())
+				{
+					duration = ranger_get_time_usec();
+					ranger_timer_stop();
+					ranger_state = CALCULATE_DISTANCE;
+				}
+				break;
+			}
+
+			case CALCULATE_DISTANCE:
+			{
+				ranger_state = SWITCH_TO_OUTPUT;
+				range = duration / 29 / 2;
+				continue_loop = false;
+				break;
+			}
+			case ERROR:
+			{
+				ranger_state = SWITCH_TO_OUTPUT;
+				set_ranger_to_output();
+				ranger_disable_output();
+				ranger_timer_stop();
+				continue_loop = false;
+				break;
+			}
 		}
 	}
 

@@ -23,6 +23,7 @@ typedef enum {
 	WAIT_FOR_START,
 	WAIT_FOR_END,
 	CALCULATE_DISTANCE,
+	ERROR
 } ultrasonic_state_t;
 
 
@@ -35,15 +36,13 @@ typedef enum {
 
 void init_ultrasonic_ranger(buckler_port_t port, uint32_t initLEDs);
 
-// The function to call inside the while loop.
-// This needs to be repeatedly called to
-// actually process and go through the states
-// to obtain the distance from the Grove Ultrasonic Ranger.
-// The return value will be either the previous distance
-// or a newly obtained distance.
-// It may also be 0 if for some reason, there is a timeout
+// This function will return the distance measured by the ultrasonic ranger.
+// It will go through the entire process of switching it to output, and
+// then switching to input, and do all the calculations.
+// May take about a millisecond or two to fully run.
+// It may also be 600 if for some reason, there is a timeout
 // when trying to obtain the distance.
-long ultrasonic_ranger_loop_call();
+long ultrasonic_ranger_get_distance_cm();
 
 
 /************ PROXIMITY WARNING LED WRAPPERS ************/

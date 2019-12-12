@@ -277,7 +277,7 @@ int main (void) {
   while (1) {
     // Determines sampling rate
     // TODO: Figure out how to to dealsy because ultrasonic_ranger can't delay more than 1ms
-    nrf_delay_ms(10);
+    //nrf_delay_ms(10);
 
     for (int i=0; i<3; i++) {
       nrf_gpio_pin_toggle(LEDS[i]);
@@ -311,7 +311,11 @@ int main (void) {
     //printf("Velocity: %f\n", velocity);
 
     /************************************** PROXIMITY **************************************/
-    range = ultrasonic_ranger_loop_call();
+    start_count = app_timer_cnt_get();
+    range = ultrasonic_ranger_get_distance_cm();
+    end_count = app_timer_cnt_get();
+    time_microsec = app_timer_ticks_to_usec(end_count - start_count);
+    printf("Time to run ULTRASONIC: %d\n", time_microsec);
     printf("Ultrasonic ranger range: %ld\n", range);
 
     // STATE MACHINES
