@@ -277,7 +277,7 @@ int main (void) {
   while (1) {
     // Determines sampling rate
     // TODO: Figure out how to to dealsy because ultrasonic_ranger can't delay more than 1ms
-    //nrf_delay_ms(10);
+    nrf_delay_ms(10);
 
     for (int i=0; i<3; i++) {
       nrf_gpio_pin_toggle(LEDS[i]);
@@ -286,7 +286,11 @@ int main (void) {
     // GET MEASUREMENTS AND INPUTS
     /************************************** TURNING **************************************/
     float x_acc, y_acc, z_acc;
-    //sample_9250_accelerometer(&x_acc, &y_acc, &z_acc);
+    uint32_t start_count = app_timer_cnt_get();
+    sample_9250_accelerometer(&x_acc, &y_acc, &z_acc);
+    uint32_t end_count = app_timer_cnt_get();
+    uint32_t time_microsec = app_timer_ticks_to_usec(end_count - start_count);
+    printf("Time to run accelerometer: %d\n", time_microsec);
     // TODO: set threshold as macro
     bool turned_left = (y_acc > 0.4), turned_right = (y_acc < -0.4);
     // Temporary debugging for turn signal debugging (button press instead of ble button)
