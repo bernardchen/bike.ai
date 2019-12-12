@@ -1,0 +1,22 @@
+TODO 12/12/19
+BLE:
+  - support multiple connections
+  - filter by MAC address
+  - mount by velcro?
+  - integrate into turning
+Proximity:
+  - support multiple
+    - Check LEDS for multiple
+  - mount the stuff
+LED Strips:
+  - Make them work
+Integration:
+  - full integration with everything
+(OPTIONAL) Hall Effect:
+  - mount to back wheel
+  - calculate velocity with them
+  - integrate into system (turn)
+(OPTIONAL) Light Sensor:
+  - turn on/off LED strip based off of lighting
+  - (separate LED strip)
+  - nighttime riding strip
