@@ -7,12 +7,13 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		896CA3A923A6002B000A6A07 /* launchscreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 896CA3A823A6002B000A6A07 /* launchscreen.storyboard */; };
+		896CA3AD23A608FF000A6A07 /* view.swift in Sources */ = {isa = PBXBuildFile; fileRef = 896CA3AC23A608FF000A6A07 /* view.swift */; };
 		898290E7239C219300575ACC /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 898290E6239C219300575ACC /* AppDelegate.swift */; };
 		898290E9239C219300575ACC /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 898290E8239C219300575ACC /* SceneDelegate.swift */; };
 		898290EB239C219300575ACC /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 898290EA239C219300575ACC /* ViewController.swift */; };
 		898290EE239C219300575ACC /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 898290EC239C219300575ACC /* Main.storyboard */; };
 		898290F0239C219500575ACC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 898290EF239C219500575ACC /* Assets.xcassets */; };
-		898290F3239C219500575ACC /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 898290F1239C219500575ACC /* LaunchScreen.storyboard */; };
 		898290FE239C219600575ACC /* EE149BIKETests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 898290FD239C219600575ACC /* EE149BIKETests.swift */; };
 		89829109239C219600575ACC /* EE149BIKEUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89829108239C219600575ACC /* EE149BIKEUITests.swift */; };
 /* End PBXBuildFile section */
@@ -35,13 +36,14 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		896CA3A823A6002B000A6A07 /* launchscreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = launchscreen.storyboard; sourceTree = "<group>"; };
+		896CA3AC23A608FF000A6A07 /* view.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = view.swift; sourceTree = "<group>"; };
 		898290E3239C219300575ACC /* EE149BIKE.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EE149BIKE.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		898290E6239C219300575ACC /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		898290E8239C219300575ACC /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		898290EA239C219300575ACC /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
 		898290ED239C219300575ACC /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		898290EF239C219500575ACC /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		898290F2239C219500575ACC /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		898290F4239C219500575ACC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		898290F9239C219600575ACC /* EE149BIKETests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EE149BIKETests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		898290FD239C219600575ACC /* EE149BIKETests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EE149BIKETests.swift; sourceTree = "<group>"; };
@@ -49,6 +51,7 @@
 		89829104239C219600575ACC /* EE149BIKEUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EE149BIKEUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		89829108239C219600575ACC /* EE149BIKEUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EE149BIKEUITests.swift; sourceTree = "<group>"; };
 		8982910A239C219600575ACC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		89A33E4323A5EBE500BC544E /* EE149BIKE.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = EE149BIKE.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -99,13 +102,15 @@
 		898290E5239C219300575ACC /* EE149BIKE */ = {
 			isa = PBXGroup;
 			children = (
+				89A33E4323A5EBE500BC544E /* EE149BIKE.entitlements */,
 				898290E6239C219300575ACC /* AppDelegate.swift */,
 				898290E8239C219300575ACC /* SceneDelegate.swift */,
 				898290EA239C219300575ACC /* ViewController.swift */,
+				896CA3AC23A608FF000A6A07 /* view.swift */,
 				898290EC239C219300575ACC /* Main.storyboard */,
 				898290EF239C219500575ACC /* Assets.xcassets */,
-				898290F1239C219500575ACC /* LaunchScreen.storyboard */,
 				898290F4239C219500575ACC /* Info.plist */,
+				896CA3A823A6002B000A6A07 /* launchscreen.storyboard */,
 			);
 			path = EE149BIKE;
 			sourceTree = "<group>";
@@ -232,8 +237,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				898290F3239C219500575ACC /* LaunchScreen.storyboard in Resources */,
 				898290F0239C219500575ACC /* Assets.xcassets in Resources */,
+				896CA3A923A6002B000A6A07 /* launchscreen.storyboard in Resources */,
 				898290EE239C219300575ACC /* Main.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -259,6 +264,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				896CA3AD23A608FF000A6A07 /* view.swift in Sources */,
 				898290EB239C219300575ACC /* ViewController.swift in Sources */,
 				898290E7239C219300575ACC /* AppDelegate.swift in Sources */,
 				898290E9239C219300575ACC /* SceneDelegate.swift in Sources */,
@@ -303,14 +309,6 @@
 				898290ED239C219300575ACC /* Base */,
 			);
 			name = Main.storyboard;
-			sourceTree = "<group>";
-		};
-		898290F1239C219500575ACC /* LaunchScreen.storyboard */ = {
-			isa = PBXVariantGroup;
-			children = (
-				898290F2239C219500575ACC /* Base */,
-			);
-			name = LaunchScreen.storyboard;
 			sourceTree = "<group>";
 		};
 /* End PBXVariantGroup section */
@@ -434,17 +432,22 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = EE149BIKE/EE149BIKE.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 2Y8ATGR3J2;
 				INFOPLIST_FILE = EE149BIKE/Info.plist;
+				"INFOPLIST_FILE[sdk=*]" = EE149BIKE/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.2;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "https---github.com-bernardchen-bike.ai.EE149BIKE";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -452,17 +455,21 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = EE149BIKE/EE149BIKE.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 2Y8ATGR3J2;
 				INFOPLIST_FILE = EE149BIKE/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.2;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "https---github.com-bernardchen-bike.ai.EE149BIKE";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
