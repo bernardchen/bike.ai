@@ -1,50 +1,3 @@
-/**
- * Copyright (c) 2014 - 2019, Nordic Semiconductor ASA
- *
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without modification,
- * are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice, this
- *    list of conditions and the following disclaimer.
- *
- * 2. Redistributions in binary form, except as embedded into a Nordic
- *    Semiconductor ASA integrated circuit in a product or a software update for
- *    such product, must reproduce the above copyright notice, this list of
- *    conditions and the following disclaimer in the documentation and/or other
- *    materials provided with the distribution.
- *
- * 3. Neither the name of Nordic Semiconductor ASA nor the names of its
- *    contributors may be used to endorse or promote products derived from this
- *    software without specific prior written permission.
- *
- * 4. This software, with or without modification, must only be used with a
- *    Nordic Semiconductor ASA integrated circuit.
- *
- * 5. Any software provided in binary form under this license must not be reverse
- *    engineered, decompiled, modified and/or disassembled.
- *
- * THIS SOFTWARE IS PROVIDED BY NORDIC SEMICONDUCTOR ASA "AS IS" AND ANY EXPRESS
- * OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY, NONINFRINGEMENT, AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL NORDIC SEMICONDUCTOR ASA OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
- * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
- * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- */
-/**
- * @brief BLE LED Button Service central and client application main file.
- *
- * This example can be a central for up to 8 peripherals.
- * The peripheral is called ble_app_blinky and can be found in the ble_peripheral
- * folder.
- */
-
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -58,7 +11,6 @@
 #include "ble_advertising.h"
 #include "ble_conn_params.h"
 #include "ble_db_discovery.h"
-//#include "ble_lbs_c.h"
 #include "ble_conn_state.h"
 #include "nrf_ble_gatt.h"
 #include "nrf_pwr_mgmt.h"
@@ -73,52 +25,23 @@
 #define APP_BLE_CONN_CFG_TAG      1                                     /**< Tag that refers to the BLE stack configuration that is set with @ref sd_ble_cfg_set. The default tag is @ref APP_BLE_CONN_CFG_TAG. */
 #define APP_BLE_OBSERVER_PRIO     3                                     /**< BLE observer priority of the application. There is no need to modify this value. */
 
-// #define CENTRAL_SCANNING_LED      BSP_BOARD_LED_0
-// #define CENTRAL_CONNECTED_LED     BSP_BOARD_LED_1
-// #define LEDBUTTON_LED             BSP_BOARD_LED_2                       /**< LED to indicate a change of state of the Button characteristic on the peer. */
-
-// #define LEDBUTTON_BUTTON          BSP_BUTTON_0                          /**< Button that writes to the LED characteristic of the peer. */
 #define BUTTON_DETECTION_DELAY    APP_TIMER_TICKS(50)                   /**< Delay from a GPIOTE event until a button is reported as pushed (in number of timer ticks). */
 
 NRF_BLE_GATT_DEF(m_gatt);                                               /**< GATT module instance. */
-//BLE_LBS_C_ARRAY_DEF(m_lbs_c, NRF_SDH_BLE_CENTRAL_LINK_COUNT);           /**< LED button client instances. */
 BLE_DB_DISCOVERY_ARRAY_DEF(m_db_disc, NRF_SDH_BLE_CENTRAL_LINK_COUNT);  /**< Database discovery module instances. */
 NRF_BLE_SCAN_DEF(m_scan);                                               /**< Scanning Module instance. */
 
 static char const m_target_periph_name[] = "iTAG            ";             /**< Name of the device to try to connect to. This name is searched for in the scanning report data. */
-static char const test_periph_addr[] = {0x95, 0x82, 0x0e, 0x00, 0xff, 0xff};
 
-uint16_t conn_handle = 0;
-ble_gatt_db_char_t* char_handles = NULL;
-uint16_t char_handle = 0;
-uint16_t num_handles = 0;
+uint8_t left_connected = 0;
+uint16_t left_conn_handle = 0;
+uint16_t left_char_handle = 0;
+uint16_t left_num_handles = 0;
 
-/**@brief Function for handling asserts in the SoftDevice.
- *
- * @details This function is called in case of an assert in the SoftDevice.
- *
- * @warning This handler is only an example and is not meant for the final product. You need to analyze
- *          how your product is supposed to react in case of an assert.
- * @warning On assert from the SoftDevice, the system can only recover on reset.
- *
- * @param[in] line_num     Line number of the failing assert call.
- * @param[in] p_file_name  File name of the failing assert call.
- */
-//void assert_nrf_callback(uint16_t line_num, const uint8_t * p_file_name)
-//{
-//    app_error_handler(0xDEADBEEF, line_num, p_file_name);
-//}
-
-
-/**@brief Function for initializing the LEDs.
- *
- * @details Initializes all LEDs used by the application.
- */
-// static void leds_init(void)
-// {
-//     bsp_board_init(BSP_INIT_LEDS);
-// }
-
+uint8_t right_connected = 0;
+uint16_t right_conn_handle = 0;
+uint16_t right_char_handle = 0;
+uint16_t right_num_handles = 0;
 
 static void scan_evt_handler(scan_evt_t const * p_scan_evt)
 {
@@ -132,6 +55,7 @@ static void scan_evt_handler(scan_evt_t const * p_scan_evt)
         } break;
         case NRF_BLE_SCAN_EVT_CONNECTING_ERROR:
         {
+            printf("NRF_BLE_SCAN_EVT_CONNECTING_ERROR\n");
             err_code = p_scan_evt->params.connecting_err.err_code;
             APP_ERROR_CHECK(err_code);
         } break;
@@ -162,6 +86,8 @@ static void scan_init(void)
 
     err_code = nrf_ble_scan_filter_set(&m_scan, SCAN_NAME_FILTER, m_target_periph_name);
     APP_ERROR_CHECK(err_code);
+
+    printf("Filters set!\n");
 }
 
 
@@ -173,57 +99,7 @@ static void scan_start(void)
     printf("Start scanning for device name %s.\n", (uint32_t)m_target_periph_name);
     ret = nrf_ble_scan_start(&m_scan);
     APP_ERROR_CHECK(ret);
-    // Turn on the LED to signal scanning.
-    // bsp_board_led_on(CENTRAL_SCANNING_LED);
 }
-
-
-/**@brief Handles events coming from the LED Button central module.
- *
- * @param[in] p_lbs_c     The instance of LBS_C that triggered the event.
- * @param[in] p_lbs_c_evt The LBS_C event.
- */
-// static void lbs_c_evt_handler(ble_lbs_c_t * p_lbs_c, ble_lbs_c_evt_t * p_lbs_c_evt)
-// {
-//     switch (p_lbs_c_evt->evt_type)
-//     {
-//         case BLE_LBS_C_EVT_DISCOVERY_COMPLETE:
-//         {
-//             ret_code_t err_code;
-
-//             printf("LED Button Service discovered on conn_handle 0x%x",
-//                          p_lbs_c_evt->conn_handle);
-
-//             err_code = app_button_enable();
-//             APP_ERROR_CHECK(err_code);
-
-//             // LED Button Service discovered. Enable notification of Button.
-//             err_code = ble_lbs_c_button_notif_enable(p_lbs_c);
-//             APP_ERROR_CHECK(err_code);
-//         } break; // BLE_LBS_C_EVT_DISCOVERY_COMPLETE
-
-//         case BLE_LBS_C_EVT_BUTTON_NOTIFICATION:
-//         {
-//             printf("Link 0x%x, Button state changed on peer to 0x%x",
-//                          p_lbs_c_evt->conn_handle,
-//                          p_lbs_c_evt->params.button.button_state);
-
-//             if (p_lbs_c_evt->params.button.button_state)
-//             {
-//                 // bsp_board_led_on(LEDBUTTON_LED);
-//             }
-//             else
-//             {
-//                 // bsp_board_led_off(LEDBUTTON_LED);
-//             }
-//         } break; // BLE_LBS_C_EVT_BUTTON_NOTIFICATION
-
-//         default:
-//             // No implementation needed.
-//             break;
-//     }
-// }
-
 
 /**@brief Function for handling BLE events.
  *
@@ -234,48 +110,45 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 {
     ret_code_t err_code;
 
-    //printf("%s\n", p_ble_evt->evt.gap_evt.params.adv_report.data);
     // For readability.
     ble_gap_evt_t const * p_gap_evt = &p_ble_evt->evt.gap_evt;
 
     switch (p_ble_evt->header.evt_id)
     {
-        case BLE_GATTC_EVT_WRITE_RSP:
-        {
-            printf("WRITTEN!\n");
-        } break;
+        // case BLE_GATTC_EVT_WRITE_RSP:
+        // {
+        //     printf("WRITTEN!\n");
+        // } break;
         case BLE_GATTC_EVT_READ_RSP:
         {
           ble_gattc_evt_t const * p_gattc_evt = &p_ble_evt->evt.gattc_evt;
           ble_gattc_evt_read_rsp_t value_read = p_gattc_evt->params.read_rsp;
 
-          printf("Value len: %i\n", value_read.len);
-          printf("Values read: %d\n", value_read.data[0]);
+          //printf("Value len: %i\n", value_read.len);
+          //printf("Values read: %d\n", value_read.data[0]);
           int button_press_data = value_read.data[0];
             if (button_press_data == 1) {
-                printf("BUTTON PRESS DETECTED!!!\n");
+                if (p_gap_evt->conn_handle == left_conn_handle) {
+                    printf("LEFT BUTTON PRESSED!\n");
+                } else {
+                    printf("RIGHT BUTTON PRESSED!\n");
+                }
+                
+                // RESET
                 ble_gattc_write_params_t write_params;
-                uint8_t  value_to_write[1] = {0x00};       
+                uint8_t value_to_write[1] = {0x00};       
 
                 write_params.write_op = BLE_GATT_OP_WRITE_REQ;                      
-                write_params.handle   = char_handle;             
+                write_params.handle   = left_char_handle;             
                 write_params.offset   = 0;                                                          
                 write_params.len      = 1;                                                              
                 write_params.p_value  = value_to_write;                                                 
                 
-                ret_code_t err_code = sd_ble_gattc_write(conn_handle, &write_params);
+                ret_code_t err_code = sd_ble_gattc_write(p_gap_evt->conn_handle, &write_params);
                 APP_ERROR_CHECK(err_code);
             }
         } break;
-        // Custom entered case: Characteristic read
-        case BLE_GATTC_EVT_CHAR_VALS_READ_RSP:
-        {
-          ble_gattc_evt_t const * p_gattc_evt = &p_ble_evt->evt.gattc_evt;
-          ble_gattc_evt_char_vals_read_rsp_t values_read = p_gattc_evt->params.char_vals_read_rsp;
 
-          printf("Value len: %i\n", values_read.len);
-          printf("Values concat read: %s\n", values_read.values[0]);
-        } break;
         // Upon connection, check which peripheral is connected, initiate DB
         // discovery, update LEDs status, and resume scanning, if necessary.
         case BLE_GAP_EVT_CONNECTED:
@@ -285,24 +158,10 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 
             APP_ERROR_CHECK_BOOL(p_gap_evt->conn_handle < NRF_SDH_BLE_CENTRAL_LINK_COUNT);
 
-            //err_code = ble_lbs_c_handles_assign(&m_lbs_c[p_gap_evt->conn_handle],
-            //                                    p_gap_evt->conn_handle,
-            //                                    NULL);
-            //APP_ERROR_CHECK(err_code);
-
-            // Trying to use Gatt discover
-            // err_code = sd_ble_gattc_primary_services_discover(p_gap_evt->conn_handle, 0x0001,NULL);
-            // APP_ERROR_CHECK(err_code);
-
-            // Trying to use db_discovery
-            //==================================
             ble_uuid_t btn_uuid;
-            // ble_uuid128_t base_uuid = {{0xca,0xa4,0x87,0x0d,0x42,0x84,0xff,0xA9,0x59,0x4D,0x5e,0xf6,0xa0,0xed,0x07,0x46}};
-            // err_code = sd_ble_uuid_vs_add(&base_uuid, &btn_uuid.type);
-            // APP_ERROR_CHECK(err_code);
 
             btn_uuid.type = BLE_UUID_TYPE_BLE;
-            btn_uuid.uuid = 0xffe0;//0x1802;//(itag button press char) 0xffe0;//(flic buttons?) 0xeda0;
+            btn_uuid.uuid = 0xffe0;
             err_code = ble_db_discovery_evt_register(&btn_uuid);
             APP_ERROR_CHECK(err_code);
 
@@ -313,45 +172,35 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
                 APP_ERROR_CHECK(err_code);
             }
 
-            // Update LEDs status and check whether it is needed to look for more
-            // peripherals to connect to.
-            // bsp_board_led_on(CENTRAL_CONNECTED_LED);
-            //f (ble_conn_state_central_conn_count() == NRF_SDH_BLE_CENTRAL_LINK_COUNT)
-            //{
-                //bsp_board_led_off(CENTRAL_SCANNING_LED);
-            //}
-            //else
-            //{
-                // Resume scanning.
-                //bsp_board_led_on(CENTRAL_SCANNING_LED);
-                //scan_start();
-            //}
+            if (ble_conn_state_central_conn_count() != NRF_SDH_BLE_CENTRAL_LINK_COUNT) {
+                scan_start();
+            }
 
-        } break; // BLE_GAP_EVT_CONNECTED
+        } break;
 
         // Upon disconnection, reset the connection handle of the peer that disconnected, update
         // the LEDs status and start scanning again.
         case BLE_GAP_EVT_DISCONNECTED:
         {
-            printf("LBS central link 0x%x disconnected (reason: 0x%x)",
+            printf("LBS central link 0x%x disconnected (reason: 0x%x)\n",
                          p_gap_evt->conn_handle,
                          p_gap_evt->params.disconnected.reason);
-
-            if (ble_conn_state_central_conn_count() == 0)
-            {
-                //err_code = app_button_disable();
-                //APP_ERROR_CHECK(err_code);
-
-                // Turn off the LED that indicates the connection.
-                //bsp_board_led_off(CENTRAL_CONNECTED_LED);
+            if (p_gap_evt->conn_handle == left_conn_handle) {
+                printf("LEFT DISCONNECTED\n");
+                left_connected = 0;
+                left_conn_handle = 0;
+                left_char_handle = 0;
+                left_num_handles = 0;
+            } else {
+                printf("RIGHT DISCONENCTED\n");
+                right_connected = 0;
+                right_conn_handle = 0;
+                right_char_handle = 0;
+                right_num_handles = 0;
             }
 
             // Start scanning.
             scan_start();
-
-            // Turn on the LED for indicating scanning.
-            //bsp_board_led_on(CENTRAL_SCANNING_LED);
-
         } break;
 
         case BLE_GAP_EVT_TIMEOUT:
@@ -408,23 +257,6 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
     }
 }
 
-
-/**@brief LED Button collector initialization. */
-// static void lbs_c_init(void)
-// {
-//     ret_code_t       err_code;
-//     ble_lbs_c_init_t lbs_c_init_obj;
-
-//     lbs_c_init_obj.evt_handler = lbs_c_evt_handler;
-
-//     for (uint32_t i = 0; i < NRF_SDH_BLE_CENTRAL_LINK_COUNT; i++)
-//     {
-//         err_code = ble_lbs_c_init(&m_lbs_c[i], &lbs_c_init_obj);
-//         APP_ERROR_CHECK(err_code);
-//     }
-// }
-
-
 /**@brief Function for initializing the BLE stack.
  *
  * @details Initializes the SoftDevice and the BLE event interrupts.
@@ -450,78 +282,6 @@ static void ble_stack_init(void)
     NRF_SDH_BLE_OBSERVER(m_ble_observer, APP_BLE_OBSERVER_PRIO, ble_evt_handler, NULL);
 }
 
-
-/**@brief Function for writing to the LED characteristic of all connected clients.
- *
- * @details Based on whether the button is pressed or released, this function writes a high or low
- *          LED status to the server.
- *
- * @param[in] button_action The button action (press or release).
- *            Determines whether the LEDs of the servers are ON or OFF.
- *
- * @return If successful, NRF_SUCCESS is returned. Otherwise, returns the error code from @ref ble_lbs_led_status_send.
- */
-// static ret_code_t led_status_send_to_all(uint8_t button_action)
-// {
-//     ret_code_t err_code;
-
-//     for (uint32_t i = 0; i< NRF_SDH_BLE_CENTRAL_LINK_COUNT; i++)
-//     {
-//         err_code = ble_lbs_led_status_send(&m_lbs_c[i], button_action);
-//         if (err_code != NRF_SUCCESS &&
-//             err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
-//             err_code != NRF_ERROR_INVALID_STATE)
-//         {
-//             return err_code;
-//         }
-//     }
-//         return NRF_SUCCESS;
-// }
-
-
-/**@brief Function for handling events from the button handler module.
- *
- * @param[in] pin_no        The pin that the event applies to.
- * @param[in] button_action The button action (press or release).
- */
-// static void button_event_handler(uint8_t pin_no, uint8_t button_action)
-// {
-//     ret_code_t err_code;
-
-//     switch (pin_no)
-//     {
-//         case LEDBUTTON_BUTTON:
-//             err_code = led_status_send_to_all(button_action);
-//             if (err_code == NRF_SUCCESS)
-//             {
-//                 printf("LBS write LED state %d", button_action);
-//             }
-//             break;
-
-//         default:
-//             APP_ERROR_HANDLER(pin_no);
-//             break;
-//     }
-// }
-
-
-/**@brief Function for initializing the button handler module.
- */
-// static void buttons_init(void)
-// {
-//     ret_code_t err_code;
-
-//    // The array must be static because a pointer to it is saved in the button handler module.
-//     static app_button_cfg_t buttons[] =
-//     {
-//         {LEDBUTTON_BUTTON, false, BUTTON_PULL, button_event_handler}
-//     };
-
-//     err_code = app_button_init(buttons, ARRAY_SIZE(buttons), BUTTON_DETECTION_DELAY);
-//     APP_ERROR_CHECK(err_code);
-// }
-
-
 /**@brief Function for handling database discovery events.
  *
  * @details This function is a callback function to handle events from the database discovery module.
@@ -533,54 +293,23 @@ static void ble_stack_init(void)
 static void db_disc_handler(ble_db_discovery_evt_t * p_evt)
 {
     printf("DISC_HANDLER CALLED!\n");
-    //NRF_LOG_DEBUG("call to ble_lbs_on_db_disc_evt for instance %d and link 0x%x!",
-    //              p_evt->conn_handle,
-    //              p_evt->conn_handle);
-
-    //ble_lbs_on_db_disc_evt(&m_lbs_c[p_evt->conn_handle], p_evt);
     if (p_evt->evt_type == BLE_DB_DISCOVERY_SRV_NOT_FOUND) {
       printf("Something went wrong, Service not found\n");
     }
 
-    conn_handle = p_evt->conn_handle;
-    char_handle = p_evt->params.discovered_db.charateristics[0].characteristic.handle_value;
-    char_handles = p_evt->params.discovered_db.charateristics;
-    num_handles = p_evt->params.discovered_db.char_count;
-    printf("Conn_handle: %x\nChar_handles: %x\nNum_handles: %i\n", conn_handle, char_handles[0].characteristic.handle_value, num_handles);
-
-    // printf("Enabling notifications\n");
-
-    // if (char_handles[3].cccd_handle == BLE_GATT_HANDLE_INVALID) {
-    //     printf("INVALIDDDDDD\n");
-    // }
-
-    // ble_gattc_write_params_t write_params;
-    // write_params.write_op = BLE_GATT_OP_WRITE_CMD;
-    // write_params.flags = BLE_GATT_EXEC_WRITE_FLAG_PREPARED_WRITE;
-    // write_params.handle = p_evt->params.discovered_db.charateristics[3].cccd_handle;
-    // write_params.offset = 0;
-    // write_params.len = 1;
-    // uint8_t write_value = 0x1;
-    // write_params.p_value = &write_value;
-
-    // printf("cccd handle: %x\n", char_handles[3].cccd_handle);
-
-    // ble_gattc_write_params_t write_params;
-    // uint8_t EnableNotification[2] = {0x01, 0x00};       
-
-    // write_params.write_op = BLE_GATT_OP_WRITE_REQ;                      
-    // write_params.handle   = char_handles[3].cccd_handle;             
-    // write_params.offset   = 0;                                                          
-    // write_params.len      = 2;                                                              
-    // write_params.p_value  = EnableNotification;                                                 
-    
-    // ret_code_t err_code = sd_ble_gattc_write(conn_handle, &write_params);
-    // printf("PRINTING NOTIF CHAR:\n");
-    // ret_code_t err_code = sd_ble_gattc_read(conn_handle, char_handles[3].cccd_handle, 0);
-    // APP_ERROR_CHECK(err_code);
-    // ret_code_t err_code = sd_ble_gattc_write(conn_handle, &write_params);
-    // ret_code_t err_code = sd_ble_gattc_write(conn_handle, &write_params);
-    // APP_ERROR_CHECK(err_code);
+    if (!left_connected) {
+        left_connected = 1;
+        left_conn_handle = p_evt->conn_handle;
+        left_char_handle = p_evt->params.discovered_db.charateristics[0].characteristic.handle_value;
+        left_num_handles = p_evt->params.discovered_db.char_count;
+        printf("LEFT:\n Conn_handle: %x\nChar_handles: %x\nNum_handles: %i\n", left_conn_handle, left_char_handle, left_num_handles);
+    } else {
+        right_connected = 1;
+        right_conn_handle = p_evt->conn_handle;
+        right_char_handle = p_evt->params.discovered_db.charateristics[0].characteristic.handle_value;
+        right_num_handles = p_evt->params.discovered_db.char_count;
+        printf("RIGHT:\n Conn_handle: %x\nChar_handles: %x\nNum_handles: %i\n", right_conn_handle, right_char_handle, right_num_handles);
+    }
 }
 
 
@@ -644,19 +373,31 @@ static void gatt_init(void)
     APP_ERROR_CHECK(err_code);
 }
 
+static void sample_buttons() {
+    if (right_num_handles > 0) {
+      ret_code_t err_code = sd_ble_gattc_read(right_conn_handle, right_char_handle, 0);
+      if (err_code != NRF_ERROR_BUSY) {
+        APP_ERROR_CHECK(err_code);
+      }
+    }
+
+    if (left_num_handles > 0) {
+      ret_code_t err_code = sd_ble_gattc_read(left_conn_handle, left_char_handle, 0);
+      if (err_code != NRF_ERROR_BUSY) {
+        APP_ERROR_CHECK(err_code);
+      }
+    }
+}
 
 int main(void)
 {
     // Initialize.
     log_init();
     timer_init();
-    //leds_init();
-    //buttons_init();
     power_management_init();
     ble_stack_init();
     gatt_init();
     db_discovery_init();
-    //lbs_c_init();
     ble_conn_state_init();
     scan_init();
 
@@ -666,31 +407,10 @@ int main(void)
 
     for (;;)
     {
-        idle_state_handle();
+        //printf("testing\n");
+        //idle_state_handle();
 
         // CODE TO READ CHARARACTERISTIC
-        if (num_handles != 0) {
-          ret_code_t err_code = sd_ble_gattc_read(conn_handle, char_handle, 0);
-          if (err_code != NRF_ERROR_BUSY) {
-            APP_ERROR_CHECK(err_code);
-          }
-        }
-
-        // CODE TO WRITE CHARACTERISTIC
-        // if (num_handles != 0) {
-        //     printf("waiting 5 seconds...\n");
-        //     nrf_delay_ms(5000);
-        //     ble_gattc_write_params_t write_params;
-        //     uint8_t EnableNotification[1] = {0x01};       
-
-        //     write_params.write_op = BLE_GATT_OP_WRITE_REQ;                      
-        //     write_params.handle   = char_handle;             
-        //     write_params.offset   = 0;                                                          
-        //     write_params.len      = 1;                                                              
-        //     write_params.p_value  = EnableNotification;                                                 
-            
-        //     ret_code_t err_code = sd_ble_gattc_write(conn_handle, &write_params);
-        //     APP_ERROR_CHECK(err_code);
-        // }
+        sample_buttons();
     }
 }
