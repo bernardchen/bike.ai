@@ -1,4 +1,0 @@
- target 'EE149-Final-Project' do
-  pod 'GoogleMaps'
-  use_frameworks!
- end

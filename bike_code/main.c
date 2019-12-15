@@ -25,7 +25,7 @@
 #include "buckler.h"
 #include "display.h"
 
-#define OUTPUT_PIN 26
+#define OUTPUT_PIN 2
 #define pi acos(-1.0)
 #define radToDeg (180.0 / pi)
 // system_bias = 2.885 / 3.0
@@ -41,14 +41,17 @@ int counter = 0;
 static nrf_drv_pwm_t m_pwm0 = NRF_DRV_PWM_INSTANCE(0);
 // Declare different arrays which create several different colors
 nrf_pwm_values_individual_t red_values[] = {
-13,6,6,6,6,6,6,6,
-6,6,6,6,6,6,6,6,
-6,6,6,6,6,6,6,6,100,100,
+    6,6,6,6,6,6,6,6,
+    13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,
+    100,100
 };
 nrf_pwm_values_individual_t green_values[] = {
-6,6,6,6,6,6,6,6,
-13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,
-100,100
+    6,6,6,6,6,6,6,6,
+
+   6,6,6,6,6,6,6,6,
+    13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,
+    100,100,    100,100,    100,100
+
 };
 nrf_pwm_values_individual_t off_values[] = {
 13,13,13,13,13,13,13,13,
@@ -155,7 +158,7 @@ void pwm_update_color(uint8_t color)
         nrf_drv_pwm_simple_playback(&m_pwm0, &red_seq, 1, NRF_DRV_PWM_FLAG_LOOP);
     } else if (color == 1){
         // We perform playback for green
-        nrf_drv_pwm_simple_playback(&m_pwm0, &green_seq, 1, NRF_DRV_PWM_FLAG_LOOP);
+        nrf_drv_pwm_simple_playback(&m_pwm0, &green_seq, 4, NRF_DRV_PWM_FLAG_LOOP);
     } else {
         // We assume they want to play yellow
         nrf_drv_pwm_simple_playback(&m_pwm0, &off_seq, 1, NRF_DRV_PWM_FLAG_LOOP);
@@ -182,7 +185,7 @@ void led_init(void){
     while(NRF_CLOCK->EVENTS_HFCLKSTARTED == 0) 
         ;
     pwm_init();
-    pwm_update_color(2);
+    pwm_update_color(1);
 }
 static int compare (const void * a, const void * b)
 {
@@ -222,7 +225,7 @@ int main(void)
 {
     led_init();
     init_accelerometer();
-    pwm_update_color(0);
+    //pwm_update_color(0);
     while(1)
     {
         nrf_delay_ms(100);

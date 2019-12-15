@@ -1,6 +1,0 @@
-framework module Pods_EE149_Final_Project {
-  umbrella header "Pods-EE149-Final-Project-umbrella.h"
-
-  export *
-  module * { export * }
-}
