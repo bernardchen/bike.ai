@@ -256,7 +256,7 @@ void sample_9250_accelerometer(float* x_axis, float* y_axis, float* z_axis) {
 
 /************************* PWM Stuff for the buggy LEDs *************************/
 // Inspired by simple_pwm example in nRF forums
-#define OUTPUT_PIN 2
+#define OUTPUT_PIN (26)
 static nrf_drv_pwm_t m_pwm0 = NRF_DRV_PWM_INSTANCE(0);
 // Declare different arrays which create several different colors
 nrf_pwm_values_individual_t red_values[] = {
@@ -265,12 +265,9 @@ nrf_pwm_values_individual_t red_values[] = {
     100,100
 };
 nrf_pwm_values_individual_t green_values[] = {
-    6,6,6,6,6,6,6,6,
-
    6,6,6,6,6,6,6,6,
     13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,
-    100,100,    100,100,    100,100
-
+    100,100,
 };
 nrf_pwm_values_individual_t off_values[] = {
 13,13,13,13,13,13,13,13,
@@ -309,7 +306,7 @@ void pwm_update_color(uint8_t color)
         nrf_drv_pwm_simple_playback(&m_pwm0, &red_seq, 1, NRF_DRV_PWM_FLAG_LOOP);
     } else if (color == 1){
         // We perform playback for green
-        nrf_drv_pwm_simple_playback(&m_pwm0, &green_seq, 4, NRF_DRV_PWM_FLAG_LOOP);
+        nrf_drv_pwm_simple_playback(&m_pwm0, &green_seq, 10, NRF_DRV_PWM_FLAG_LOOP);
     } else {
         // We assume they want to play yellow
         nrf_drv_pwm_simple_playback(&m_pwm0, &off_seq, 1, NRF_DRV_PWM_FLAG_LOOP);
