@@ -29,6 +29,7 @@
 // project includes
 #include "gpio.h"
 #include "ultrasonic_ranger.h"
+#include "turn_ble.h"
 
 // macros for accelerometer
 #define pi acos(-1.0)
@@ -46,6 +47,9 @@
 // ultrasonic ranger proximity constants
 #define LOOP_HOLD_AMOUNT (9) // number of loops that a ultrasonic ranger needs to be held for it to change
 #define DIST_THRESHOLD (250) // the distance an object has to be within to turn on the sensor (in cm)
+
+// turn signal constants
+#define TURN_DETECTED_ACCEL_THRESH (0.4)
 
 // Create timer
 APP_TIMER_DEF(main_timer);
@@ -261,6 +265,8 @@ int main (void) {
   set_up_app_timer();
   init_main_timer();
   init_button0();
+  /********* turn ble stuff *********/
+  ble_init();
   /********* ultrasonic ranger stuff *********/
   init_ultrasonic_ranger(A, D, 1);
   // LEDs for output of something nearby
@@ -298,16 +304,21 @@ int main (void) {
     /************************************** TURNING **************************************/
     float x_acc, y_acc, z_acc;
     sample_9250_accelerometer(&x_acc, &y_acc, &z_acc);
-    // TODO: set threshold as macro
-    bool turned_left = (y_acc > 0.4), turned_right = (y_acc < -0.4);
-    // Temporary debugging for turn signal debugging (button press instead of ble button)
+    bool turned_left = (y_acc > TURN_DETECTED_ACCEL_THRESH), turned_right = (y_acc < -TURN_DETECTED_ACCEL_THRESH);
+    // check if button pressed
     bool ble_left = false;
-    if (button_press_time > 0 && !gpio_read(28)) {
+    bool ble_right = false;
+    if (button_press_time > 0 && get_left_pressed()) {
       ble_left = true;
       button_press_time = 0;
+      reset_left_button();
+    }
+    else if (button_press_time > 0 && get_right_pressed()) {
+      ble_right = true;
+      button_press_time = 0;
+      reset_right_button();
     }
     printf("timer: %i\n", button_press_time);
-    bool ble_right = false;
     bool left_turn, right_turn = false;
 
     /************************************** HALL EFFECT **************************************/
