@@ -1,7 +1,9 @@
 // Wrapper for the Grove Ultrasonic Ranger
 //
 // Uses a state machine to step through the process 
-// presented gy Grove to read the distance
+// presented gy Grove to read the distance.
+// Example codes can be seen on the official website:
+// http://wiki.seeedstudio.com/Grove-Ultrasonic_Ranger/
 #pragma once
 
 #include <stdio.h>
