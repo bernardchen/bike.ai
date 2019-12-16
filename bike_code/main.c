@@ -338,6 +338,7 @@ void led_init(void){
 }
 
 /************************* Brake detection *************************/
+double values[100];
 int counter = 0;
 static int compare (const void * a, const void * b)
 {
@@ -490,6 +491,8 @@ int main (void) {
         break;
       }
     }
+    counter +=1;
+    counter = counter % 100;
 
     // State machine for proximity sensors
     // will only change if there are LOOP_HOLD_AMOUNT times in a row
