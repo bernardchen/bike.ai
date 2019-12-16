@@ -1,3 +1,9 @@
+/**
+ * To figure out how to use BLE, we heavily relied on example code
+ * provided by Nordic's SDK, mainly in examples/ble_central/multilink,
+ * that can be found at:
+ * https://developer.nordicsemi.com/nRF5_SDK/nRF5_SDK_v13.x.x/
+ */
 
 // Inits all of the stuff needed for ble
 void ble_init(void);
@@ -10,5 +16,8 @@ void sample_buttons();
 bool get_left_pressed(void);
 bool get_right_pressed(void);
 
+// Let's turn_ble.h know that the code using this
+// has gotten the button press so it is ready to
+// read another press
 void reset_left_button(void);
 void reset_right_button(void);

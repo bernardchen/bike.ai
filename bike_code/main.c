@@ -308,6 +308,7 @@ int main (void) {
     // check if button pressed
     bool ble_left = false;
     bool ble_right = false;
+    sample_buttons();
     if (button_press_time > 0 && get_left_pressed()) {
       ble_left = true;
       button_press_time = 0;

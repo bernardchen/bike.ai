@@ -1,3 +1,10 @@
+/**
+ * To figure out how to use BLE, we heavily relied on example code
+ * provided by Nordic's SDK, mainly in examples/ble_central/multilink,
+ * that can be found at:
+ * https://developer.nordicsemi.com/nRF5_SDK/nRF5_SDK_v13.x.x/
+ */
+
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -71,7 +78,6 @@ static void scan_evt_handler(scan_evt_t const * p_scan_evt)
             break;
     }
 }
-
 
 /**@brief Function for initializing the scanning and setting the filters.
  */
@@ -339,6 +345,8 @@ static void gatt_init(void)
     APP_ERROR_CHECK(err_code);
 }
 
+/**@brief Function to be called every time in the loop to see if a button has been pressed
+ */
 void sample_buttons() {
     if (right_num_handles > 0) {
       ret_code_t err_code = sd_ble_gattc_read(right_conn_handle, right_char_handle, 0);
@@ -355,6 +363,8 @@ void sample_buttons() {
     }
 }
 
+/**@brief Calls all the necessary inits to get BLE working
+ */
 void ble_init(void)
 {
     // Initialize.
@@ -369,14 +379,18 @@ void ble_init(void)
     scan_start();
 }
 
+// if the left button has been pressed
 bool get_left_pressed(void)
 {
     return left_is_pressed;
 }
+// if the right button has been pressed
 bool get_right_pressed(void)
 {
     return right_is_pressed;
 }
+
+// let's turn_ble.c know the button press has been read
 void reset_left_button(void)
 {
     left_is_pressed = false;
