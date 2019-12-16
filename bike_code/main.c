@@ -249,6 +249,92 @@ void sample_9250_accelerometer(float* x_axis, float* y_axis, float* z_axis) {
 
 
 
+/************************* PWM Stuff for the buggy LEDs *************************/
+// Inspired by simple_pwm example in nRF forums
+#define OUTPUT_PIN 2
+static nrf_drv_pwm_t m_pwm0 = NRF_DRV_PWM_INSTANCE(0);
+// Declare different arrays which create several different colors
+nrf_pwm_values_individual_t red_values[] = {
+    6,6,6,6,6,6,6,6,
+    13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,
+    100,100
+};
+nrf_pwm_values_individual_t green_values[] = {
+    6,6,6,6,6,6,6,6,
+
+   6,6,6,6,6,6,6,6,
+    13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,
+    100,100,    100,100,    100,100
+
+};
+nrf_pwm_values_individual_t off_values[] = {
+13,13,13,13,13,13,13,13,
+13,13,13,13,13,13,13,13,
+13,13,13,13,13,13,13,13,
+};
+nrf_pwm_sequence_t const red_seq =
+{
+    .values.p_individual = red_values,
+    .length          = NRF_PWM_VALUES_LENGTH(red_values),
+    .repeats         = 0,
+    .end_delay       = 0
+};
+nrf_pwm_sequence_t const green_seq =
+{
+    .values.p_individual = green_values,
+    .length          = NRF_PWM_VALUES_LENGTH(green_values),
+    .repeats         = 0,
+    .end_delay       = 0
+};
+
+nrf_pwm_sequence_t const off_seq =
+{
+    .values.p_individual = off_values,
+    .length          = NRF_PWM_VALUES_LENGTH(off_values),
+    .repeats         = 0,
+    .end_delay       = 0
+};
+
+
+// Set duty cycle between 0 and 100%
+void pwm_update_color(uint8_t color)
+{
+    if (color == 0){
+        // We perform playback for red
+        nrf_drv_pwm_simple_playback(&m_pwm0, &red_seq, 1, NRF_DRV_PWM_FLAG_LOOP);
+    } else if (color == 1){
+        // We perform playback for green
+        nrf_drv_pwm_simple_playback(&m_pwm0, &green_seq, 4, NRF_DRV_PWM_FLAG_LOOP);
+    } else {
+        // We assume they want to play yellow
+        nrf_drv_pwm_simple_playback(&m_pwm0, &off_seq, 1, NRF_DRV_PWM_FLAG_LOOP);
+    }
+}
+void pwm_init(void)
+{
+    nrf_drv_pwm_config_t const config0 =
+    {
+        .output_pins =
+        {
+            OUTPUT_PIN, 
+        },
+        .base_clock   = NRF_PWM_CLK_16MHz,
+        .count_mode   = NRF_PWM_MODE_UP,
+        .top_value    = 21,
+        .load_mode    = NRF_PWM_LOAD_INDIVIDUAL,
+        .step_mode    = NRF_PWM_STEP_AUTO
+    };
+    APP_ERROR_CHECK(nrf_drv_pwm_init(&m_pwm0, &config0, NULL));
+}
+void led_init(void){
+    NRF_CLOCK->TASKS_HFCLKSTART = 1; 
+    while(NRF_CLOCK->EVENTS_HFCLKSTARTED == 0) 
+        ;
+    pwm_init();
+    pwm_update_color(1);
+}
+
+
 typedef enum {
   RIGHT,
   LEFT,
@@ -265,6 +351,8 @@ int main (void) {
   set_up_app_timer();
   init_main_timer();
   init_button0();
+  /********* LED stuff *********/
+  led_init();
   /********* turn ble stuff *********/
   ble_init();
   /********* ultrasonic ranger stuff *********/
@@ -299,6 +387,7 @@ int main (void) {
     for (int i=0; i<3; i++) {
       nrf_gpio_pin_toggle(LEDS[i]);
     }
+    pwm_update_color(1);
 
     // GET MEASUREMENTS AND INPUTS
     /************************************** TURNING **************************************/
