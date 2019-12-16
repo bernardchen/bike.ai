@@ -1,0 +1,137 @@
+/********** LED stuff **********/
+#define OUTPUT_PIN 2
+static nrf_drv_pwm_t m_pwm0 = NRF_DRV_PWM_INSTANCE(0);
+// Declare different arrays which create several different colors
+nrf_pwm_values_individual_t red_values[] = {
+    6,6,6,6,6,6,6,6,
+    13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,
+    100,100
+};
+nrf_pwm_values_individual_t green_values[] = {
+    6,6,6,6,6,6,6,6,
+
+   6,6,6,6,6,6,6,6,
+    13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,
+    100,100,    100,100,    100,100
+
+};
+nrf_pwm_values_individual_t off_values[] = {
+13,13,13,13,13,13,13,13,
+13,13,13,13,13,13,13,13,
+13,13,13,13,13,13,13,13,
+};
+nrf_pwm_sequence_t const red_seq =
+{
+    .values.p_individual = red_values,
+    .length          = NRF_PWM_VALUES_LENGTH(red_values),
+    .repeats         = 0,
+    .end_delay       = 0
+};
+nrf_pwm_sequence_t const green_seq =
+{
+    .values.p_individual = green_values,
+    .length          = NRF_PWM_VALUES_LENGTH(green_values),
+    .repeats         = 0,
+    .end_delay       = 0
+};
+
+nrf_pwm_sequence_t const off_seq =
+{
+    .values.p_individual = off_values,
+    .length          = NRF_PWM_VALUES_LENGTH(off_values),
+    .repeats         = 0,
+    .end_delay       = 0
+};
+
+
+// Set duty cycle between 0 and 100%
+void pwm_update_color(uint8_t color)
+{
+    if (color == 0){
+        // We perform playback for red
+        nrf_drv_pwm_simple_playback(&m_pwm0, &red_seq, 1, NRF_DRV_PWM_FLAG_LOOP);
+    } else if (color == 1){
+        // We perform playback for green
+        nrf_drv_pwm_simple_playback(&m_pwm0, &green_seq, 4, NRF_DRV_PWM_FLAG_LOOP);
+    } else {
+        // We assume they want to play yellow
+        nrf_drv_pwm_simple_playback(&m_pwm0, &off_seq, 1, NRF_DRV_PWM_FLAG_LOOP);
+    }
+}
+void pwm_init(void)
+{
+    nrf_drv_pwm_config_t const config0 =
+    {
+        .output_pins =
+        {
+            OUTPUT_PIN, 
+        },
+        .base_clock   = NRF_PWM_CLK_16MHz,
+        .count_mode   = NRF_PWM_MODE_UP,
+        .top_value    = 21,
+        .load_mode    = NRF_PWM_LOAD_INDIVIDUAL,
+        .step_mode    = NRF_PWM_STEP_AUTO
+    };
+    APP_ERROR_CHECK(nrf_drv_pwm_init(&m_pwm0, &config0, NULL));
+}
+void led_init(void){
+    NRF_CLOCK->TASKS_HFCLKSTART = 1; 
+    while(NRF_CLOCK->EVENTS_HFCLKSTARTED == 0) 
+        ;
+    pwm_init();
+    pwm_update_color(1);
+}
+
+
+
+
+/********** Brake detection **********/
+int counter = 0;
+static int compare (const void * a, const void * b)
+{
+  if (*(double*)a > *(double*)b) return 1;
+  else if (*(double*)a < *(double*)b) return -1;
+  else return 0;  
+}
+// median and IQR based method
+void stats(double* median, double* upper_iqr, double* lower_iqr){
+  int length = counter+1;
+  qsort (values, length, sizeof(double), compare);  
+  *median = values[length/2];
+  double iqr = values[(3*length)/4]-values[length/4];
+  *upper_iqr = (iqr)*7 + values[3*length/4];
+  *lower_iqr = values[length/4] - (iqr)*7;
+}
+// standard deviation and mean based method1
+bool detected(void){
+    double x;double y;double z;
+    sample_accel(&x,&y,&z);
+    if (x > 0.0){
+        return false;
+    }
+    values[counter] = x*-1;
+    double median; double upper_iqr; double lower_iqr; 
+    stats(&median,&upper_iqr,&lower_iqr);
+    if (x*-1 > upper_iqr || x*-1 < lower_iqr){
+        printf("OUTLIAR");
+        printf("\n upper %f\n",upper_iqr);
+        printf("\n lower %f\n",lower_iqr);
+        printf("\n value %f\n",x*-1);
+        return true;
+    }
+    return false;
+}
+
+
+
+/********** To include in main **********/
+led_init();
+
+// inside while
+    if (detected()){
+            // TODO we should add a timed call in here to turn this off after like 3 seconds or something, also while this timer is activated we dont append 
+            // any data to our online detection scheme because this is all
+            pwm_update_color(1);
+    }
+    counter +=1;
+    counter = counter % 100;
