@@ -25,10 +25,10 @@ uint32_t current_pin_num = 0; // the pin that is currently being used to poll
 
 
 /************* TIMER STUFF *************/
-// always set the timer to 20 so if it's ever called, something went wrong
+// always set the timer to 12 so if it's ever called, something went wrong
 // and we want to restart measurement.
 // otherwise for normal switching, we should do it before the timer ends
-#define RANGER_TIMEOUT (12) // 20 milli seconds
+#define RANGER_TIMEOUT (12) // 12 milli seconds
 							// this timeout gives about max 200cm
 
 // gets called when timer runs out and doesn't transition states as expected.
@@ -325,7 +325,7 @@ long ultrasonic_ranger_get_distance_cm(uint32_t isLeft)
 	return range;
 }
 
-// ACTUALLY FUNCTIONS TO CALL
+// ACTUALLY FUNCTIONS TO CALL to get distance
 long ultrasonic_get_left_distance_cm()
 {
 	return ultrasonic_ranger_get_distance_cm(1);
@@ -338,7 +338,7 @@ long ultrasonic_get_right_distance_cm()
 
 
 /************ PROXIMITY WARNING LED WRAPPERS ************/
-// welcome to macro hell
+// welcome to macro hell (nested macros)
 // reusing the buckler ios
 #define RIGHT_PROXI_LED BUCKLER_LCD_MISO // pin 16
 #define LEFT_PROXI_LED BUCKLER_LCD_CS // pin 18
@@ -350,7 +350,8 @@ void init_proxi_leds()
 }
 
 // functions to turn on and off the leds for right side
-// (wrapper used to hard code the LEDs used in ultrasonic_ranger.c)
+// (wrapper used to hard code the LEDs used in ultrasonic_ranger.c.
+// To change which GPIO port to use, change the macro above
 void turn_on_right_proxi_led()
 {
 	nrf_gpio_pin_set(RIGHT_PROXI_LED);
@@ -361,7 +362,8 @@ void turn_off_right_proxi_led()
 }
 
 // functions to turn on and off the leds for left side
-// (wrapper used to hard code the LEDs used in ultrasonic_ranger.c)
+// (wrapper used to hard code the LEDs used in ultrasonic_ranger.c.
+// To change which GPIO port to use, change the macro above
 void turn_on_left_proxi_led()
 {
 	nrf_gpio_pin_set(LEFT_PROXI_LED);
