@@ -480,10 +480,10 @@ int main (void) {
         break;
       }
       case ON: {
-        prinf("Brake light is ON\n");
+        printf("Brake light is ON\n");
         if (brake_time_on > 2 && !detected())
         {
-          prinf("Turning off brake lights\n");
+          printf("Turning off brake lights\n");
           brake_time_on = 0;
           brake_state = OFF;
         }
