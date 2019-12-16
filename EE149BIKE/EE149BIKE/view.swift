@@ -17,28 +17,42 @@ import CoreBluetooth
 import UIKit
 
 class View: UIViewController,UITextFieldDelegate {
-    @IBAction func autoBrake(_ sender: Any) {
-        print("Succeeded!")
+    var brakeColor = "Yellow"
+    var turnColor = "Green"
+    var autoBrake = "1"
+    var dist = "2"
+    @IBAction func autoBrake(_ sender: UISegmentedControl  ) {
+        if (sender.selectedSegmentIndex == 0) {
+            autoBrake = "0"
+        } else {
+            autoBrake = "1"
+        }
+        print("Toggled Auto Brake")
     }
     @IBAction func yellowBrake(_ sender: Any) {
         print("yellowBrake")
+        brakeColor = "Yellow"
     }
     @IBAction func redBrake(_ sender: Any) {
         print("redBrake")
+        brakeColor = "Red"
     }
     @IBAction func blueBrake(_ sender: Any) {
-        print("blueBrake")
+        print("greenBrake")
+        brakeColor = "Green"
     }
     @IBAction func blueTurn(_ sender: Any) {
+        turnColor = "Green"
     }
     
     @IBOutlet weak var myTextField: UITextField!
     @IBAction func redTurn(_ sender: Any) {
+        turnColor = "Red"
     }
     @IBAction func yellowTurn(_ sender: Any) {
+        turnColor = "Yellow"
     }
     var peripheralManager: CBManager?
-    var brake_color = "red"
        override func viewDidLoad() {
            super.viewDidLoad()
         self.myTextField.delegate = self
@@ -50,6 +64,7 @@ class View: UIViewController,UITextFieldDelegate {
         if (textField.text!.count > 1){
             return true
         }
+        dist = textField.text!
           self.view.endEditing(true)
           return false
       }
@@ -81,9 +96,9 @@ extension View : CBPeripheralManagerDelegate {
             print("No Auth")
         case .poweredOn:
             print("There is Power")
-            let advertisementData = [CBAdvertisementDataLocalNameKey: "LIL1.2BLUERED1"]
+            let advertisementData = [CBAdvertisementDataLocalNameKey:
+                "LIL\(brakeColor)\(turnColor)\(autoBrake) , \(dist)"]
             let temp = peripheralManager as! CBPeripheralManager?
-
             temp!.startAdvertising(advertisementData)
         @unknown default:
             print("Default Case")
