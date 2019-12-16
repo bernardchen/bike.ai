@@ -211,12 +211,13 @@ static void set_up_app_timer(void)
 
 // timer stuff for timeout
 // Callback function for timer
-// turn_time_on used for turn signal state machine
-uint32_t turn_time_on = 0;
+uint32_t turn_time_on = 0; // turn_time_on used for turn signal state machine
 uint32_t button_press_time = 0;
+uint32_t brake_time_on = 0; // brake_time_on used for brake state machine
 void main_timer_callback() {
   turn_time_on++;
   button_press_time++;
+  brake_time_on++;
 }
 
 void init_main_timer() {
@@ -309,7 +310,7 @@ void pwm_update_color(uint8_t color)
         nrf_drv_pwm_simple_playback(&m_pwm0, &green_seq, 10, NRF_DRV_PWM_FLAG_LOOP);
     } else {
         // We assume they want to play yellow
-        nrf_drv_pwm_simple_playback(&m_pwm0, &off_seq, 1, NRF_DRV_PWM_FLAG_LOOP);
+        nrf_drv_pwm_simple_playback(&m_pwm0, &off_seq, 10, NRF_DRV_PWM_FLAG_LOOP);
     }
 }
 void pwm_init(void)
@@ -334,6 +335,43 @@ void led_init(void){
         ;
     pwm_init();
     pwm_update_color(1);
+}
+
+/************************* Brake detection *************************/
+int counter = 0;
+static int compare (const void * a, const void * b)
+{
+  if (*(double*)a > *(double*)b) return 1;
+  else if (*(double*)a < *(double*)b) return -1;
+  else return 0;  
+}
+// median and IQR based method
+void stats(double* median, double* upper_iqr, double* lower_iqr){
+  int length = counter+1;
+  qsort (values, length, sizeof(double), compare);  
+  *median = values[length/2];
+  double iqr = values[(3*length)/4]-values[length/4];
+  *upper_iqr = (iqr)*7 + values[3*length/4];
+  *lower_iqr = values[length/4] - (iqr)*7;
+}
+// standard deviation and mean based method1
+bool detected(void){
+    double x;double y;double z;
+    sample_accel(&x,&y,&z);
+    if (x > 0.0){
+        return false;
+    }
+    values[counter] = x*-1;
+    double median; double upper_iqr; double lower_iqr; 
+    stats(&median,&upper_iqr,&lower_iqr);
+    if (x*-1 > upper_iqr || x*-1 < lower_iqr){
+        printf("OUTLIAR");
+        printf("\n upper %f\n",upper_iqr);
+        printf("\n lower %f\n",lower_iqr);
+        printf("\n value %f\n",x*-1);
+        return true;
+    }
+    return false;
 }
 
 
@@ -430,9 +468,25 @@ int main (void) {
     // State machine for brake
     switch(brake_state) {
       case OFF: {
+        printf("Brake light is OFF\n");
+        pwm_update_color(2); // 2 is off
+        if (detected())
+        {
+          printf("DETECTED BRAKE\n");
+          brake_time_on = 0;
+          brake_state = ON;
+        }
         break;
       }
       case ON: {
+        prinf("Brake light is ON\n");
+        if (brake_time_on > 2 && !detected())
+        {
+          prinf("Turning off brake lights\n");
+          brake_time_on = 0;
+          brake_state = OFF;
+        }
+        pwm_update_color(1); // green
         break;
       }
     }
