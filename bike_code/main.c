@@ -9,6 +9,11 @@
 #include <time.h>
 
 // nrf includes
+#include "nrf_drv_pwm.h"
+#include "app_util_platform.h"
+#include "nrf_drv_clock.h"
+#include "boards.h"
+#include "bsp.h"
 #include "app_error.h"
 #include "nrf.h"
 #include "nrf_delay.h"
