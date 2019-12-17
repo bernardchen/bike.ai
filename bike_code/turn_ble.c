@@ -118,7 +118,7 @@ static void scan_start(void)
 {
     ret_code_t ret;
 
-    printf("Start scanning for device name %s.\n", (uint32_t)m_target_periph_name);
+    printf("Start scanning for BLE buttons (%s) and app (%s).\n", (uint32_t)m_target_periph_name, (uint32_t)app_name);
     ret = nrf_ble_scan_start(&m_scan);
     APP_ERROR_CHECK(ret);
 }
@@ -220,8 +220,14 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
                 left_conn_handle = 0;
                 left_char_handle = 0;
                 left_num_handles = 0;
+			} else if (p_gap_evt->conn_handle == app_conn_handle) {
+                printf("APP DISCONNECTED\n");
+                app_connected = 0;
+                app_conn_handle = 0;
+                app_char_handle = 0;
+                app_num_handles = 0;
             } else {
-                printf("RIGHT DISCONENCTED\n");
+                printf("RIGHT DISCONNECTED\n");
                 right_connected = 0;
                 right_conn_handle = 0;
                 right_char_handle = 0;
@@ -340,7 +346,7 @@ static void db_disc_handler(ble_db_discovery_evt_t * p_evt)
 			right_num_handles = p_evt->params.discovered_db.char_count;
 			printf("RIGHT:\n Conn_handle: %x\nChar_handles: %x\nNum_handles: %i\n", right_conn_handle, right_char_handle, right_num_handles);
 		}
-	} else {
+	} else if (p_evt->params.discovered_db.char_count == 2) {
 		app_connected = 1;
 		app_conn_handle = p_evt->conn_handle;
 		app_char_handle = p_evt->params.discovered_db.charateristics[0].characteristic.handle_value;
