@@ -52,10 +52,17 @@
 
 // ultrasonic ranger proximity constants
 #define LOOP_HOLD_AMOUNT (9) // number of loops that a ultrasonic ranger needs to be held for it to change
-#define DIST_THRESHOLD (250) // the distance an object has to be within to turn on the sensor (in cm)
 
 // turn signal constants
 #define TURN_DETECTED_ACCEL_THRESH (0.4)
+
+// LED constants
+#define OUTPUT_PIN_BRAKE (26)
+#define OUTPUT_PIN_LEFT_TURN (21)
+#define OUTPUT_PIN_RIGHT_TURN (12)
+
+// brake constants
+#define BRAKE_LIGHT_ON_SECS (3)
 
 // Create timer
 APP_TIMER_DEF(main_timer);
@@ -258,9 +265,9 @@ void sample_9250_accelerometer(float* x_axis, float* y_axis, float* z_axis) {
 
 /************************* PWM Stuff for the buggy LEDs *************************/
 // Inspired by simple_pwm example in nRF forums
-#define OUTPUT_PIN (26)
 static nrf_drv_pwm_t m_pwm0 = NRF_DRV_PWM_INSTANCE(0);
 static nrf_drv_pwm_t m_pwm1 = NRF_DRV_PWM_INSTANCE(1);
+static nrf_drv_pwm_t m_pwm2 = NRF_DRV_PWM_INSTANCE(2);
 
 // Declare different arrays which create several different colors
 nrf_pwm_values_individual_t red_values[] = {
@@ -298,6 +305,13 @@ nrf_pwm_sequence_t const green_seq =
     .repeats         = 0,
     .end_delay       = 0
 };
+nrf_pwm_sequence_t const yellow_seq =
+{
+    .values.p_individual = yellow_values,
+    .length          = NRF_PWM_VALUES_LENGTH(yellow_values),
+    .repeats         = 0,
+    .end_delay       = 0
+};
 
 nrf_pwm_sequence_t const off_seq =
 {
@@ -306,6 +320,10 @@ nrf_pwm_sequence_t const off_seq =
     .repeats         = 0,
     .end_delay       = 0
 };
+
+
+
+
 
 
 // Set duty cycle between 0 and 100%
@@ -325,13 +343,18 @@ void pwm_update_color(uint8_t color)
 
     }
 }
+
+
+
+
+
 void pwm_init(void)
 {
     nrf_drv_pwm_config_t const config0 =
     {
         .output_pins =
         {
-            OUTPUT_PIN,
+            OUTPUT_PIN_BRAKE,
             
         },
         .base_clock   = NRF_PWM_CLK_16MHz,
@@ -342,26 +365,39 @@ void pwm_init(void)
     };
     APP_ERROR_CHECK(nrf_drv_pwm_init(&m_pwm0, &config0, NULL));
     nrf_drv_pwm_config_t const config1 =
-       {
-           .output_pins =
-           {
-               2,
-               
-           },
-           .base_clock   = NRF_PWM_CLK_16MHz,
-           .count_mode   = NRF_PWM_MODE_UP,
-           .top_value    = 21,
-           .load_mode    = NRF_PWM_LOAD_INDIVIDUAL,
-           .step_mode    = NRF_PWM_STEP_AUTO
-       };
-       APP_ERROR_CHECK(nrf_drv_pwm_init(&m_pwm1, &config1, NULL));
+    {
+        .output_pins =
+        {
+            OUTPUT_PIN_LEFT_TURN,
+            
+        },
+        .base_clock   = NRF_PWM_CLK_16MHz,
+        .count_mode   = NRF_PWM_MODE_UP,
+        .top_value    = 21,
+        .load_mode    = NRF_PWM_LOAD_INDIVIDUAL,
+        .step_mode    = NRF_PWM_STEP_AUTO
+    };
+    APP_ERROR_CHECK(nrf_drv_pwm_init(&m_pwm1, &config1, NULL));
+    nrf_drv_pwm_config_t const config2 =
+    {
+        .output_pins =
+        {
+            OUTPUT_PIN_RIGHT_TURN,
+            
+        },
+        .base_clock   = NRF_PWM_CLK_16MHz,
+        .count_mode   = NRF_PWM_MODE_UP,
+        .top_value    = 21,
+        .load_mode    = NRF_PWM_LOAD_INDIVIDUAL,
+        .step_mode    = NRF_PWM_STEP_AUTO
+    };
+    APP_ERROR_CHECK(nrf_drv_pwm_init(&m_pwm2, &config2, NULL));
 }
 void led_init(void){
     NRF_CLOCK->TASKS_HFCLKSTART = 1; 
     while(NRF_CLOCK->EVENTS_HFCLKSTARTED == 0) 
         ;
     pwm_init();
-    pwm_update_color(1);
 }
 
 /************************* Brake detection *************************/
@@ -383,7 +419,7 @@ void stats(double* median, double* upper_iqr, double* lower_iqr){
   *lower_iqr = values[length/4] - (iqr)*7;
 }
 // standard deviation and mean based method1
-bool detected(void){
+bool detected_non_residual(void){
     double x;double y;double z;
     sample_accel(&x,&y,&z);
     if (x > 0.0){
@@ -403,7 +439,7 @@ bool detected(void){
 }
 // need to fix a bit for both of these functions residual detected function
 // standard deviation and mean based method1
-/*bool detected(void){
+bool detected_residual(void){
     double x;double y;double z;
     sample_accel(&x,&y,&z);
     if (x > 0.0){
@@ -412,7 +448,7 @@ bool detected(void){
     length = 0
     if (counter < 100){
         length = counter/2
- }
+    }
     values[counter] = (x*-1-values[]);
     double median; double upper_iqr; double lower_iqr;
     stats(&median,&upper_iqr,&lower_iqr);
@@ -425,7 +461,84 @@ bool detected(void){
     }
     return false;
 }
- */
+// main detected funciton that will call the proper one
+// based on configured mode
+// if is_residual is 1, calls that one
+// otherwise, calls non-residual
+bool detected(uint8_t is_residual)
+{
+  if (is_residual == 1)
+  {
+    return detected_residual();
+  }
+  else
+  {
+    return detected_non_residual();
+  }
+}
+
+/************************* LED Lighting configs *************************/
+// brakes is pwm0
+void turn_off_brake_lights()
+{
+  nrf_drv_pwm_simple_playback(&m_pwm0, &off_seq, 40, NRF_DRV_PWM_FLAG_STOP);
+}
+void turn_on_brake_lights(uint8_t brake_color)
+{
+  if (brake_color == 0)
+  {
+    nrf_drv_pwm_simple_playback(&m_pwm0, &green_seq, 40, NRF_DRV_PWM_FLAG_STOP);
+  }
+  else if (brake_color == 1)
+  {
+    nrf_drv_pwm_simple_playback(&m_pwm0, &red_seq, 40, NRF_DRV_PWM_FLAG_STOP);
+  }
+  else
+  {
+    nrf_drv_pwm_simple_playback(&m_pwm0, &yellow_seq, 40, NRF_DRV_PWM_FLAG_STOP);
+  }
+}
+// left is pwm1
+void turn_off_left_lights()
+{
+  nrf_drv_pwm_simple_playback(&m_pwm1, &off_seq, 40, NRF_DRV_PWM_FLAG_STOP);
+}
+void turn_on_left_lights(uint8_t brake_color)
+{
+  if (brake_color == 0)
+  {
+    nrf_drv_pwm_simple_playback(&m_pwm1, &green_seq, 40, NRF_DRV_PWM_FLAG_STOP);
+  }
+  else if (brake_color == 1)
+  {
+    nrf_drv_pwm_simple_playback(&m_pwm1, &red_seq, 40, NRF_DRV_PWM_FLAG_STOP);
+  }
+  else
+  {
+    nrf_drv_pwm_simple_playback(&m_pwm1, &yellow_seq, 40, NRF_DRV_PWM_FLAG_STOP);
+  }
+}
+// right is pwm2
+void turn_off_right_lights()
+{
+  nrf_drv_pwm_simple_playback(&m_pwm2, &off_seq, 40, NRF_DRV_PWM_FLAG_STOP);
+}
+void turn_on_right_lights(uint8_t brake_color)
+{
+  if (brake_color == 0)
+  {
+    nrf_drv_pwm_simple_playback(&m_pwm2, &green_seq, 40, NRF_DRV_PWM_FLAG_STOP);
+  }
+  else if (brake_color == 1)
+  {
+    nrf_drv_pwm_simple_playback(&m_pwm2, &red_seq, 40, NRF_DRV_PWM_FLAG_STOP);
+  }
+  else
+  {
+    nrf_drv_pwm_simple_playback(&m_pwm2, &yellow_seq, 40, NRF_DRV_PWM_FLAG_STOP);
+  }
+}
+ 
 
 
 typedef enum {
@@ -446,6 +559,9 @@ int main (void) {
   init_button0();
   /********* LED stuff *********/
   led_init();
+  turn_off_brake_lights();
+  turn_off_left_lights();
+  turn_off_right_lights();
   /********* turn ble stuff *********/
   ble_init();
   /********* ultrasonic ranger stuff *********/
@@ -465,15 +581,16 @@ int main (void) {
   float velocity = 0;
   long left_range = 0;
   long right_range = 0;
+  long distance_threshold = 200; // represents distance in centimeters
 
   // variable just for proximity sensor so that false reads don't change 
   uint16_t num_in_a_row_left = 0;
   uint16_t num_in_a_row_right = 0;
 
-  /* brake_mode: 0 is ___, 1 is ____
-   * turn_light_color: 0 is __, 1 is ___, 2 is ____
-   * brake_light_color: 0 is __, 1 is ___, 2 is ___
-   * proximity_dist: 0 is ___ 1 is ____
+  /* brake_mode: 0 is NON-RESIDUAL, 1 is RESIDUAL
+   * turn_light_color: 0 is GREEN, 1 is RED, 2 is YELLOW
+   * brake_light_color: 0 is GREEN, 1 is RED, 2 is YELLOW
+   * proximity_dist: 0 is ZERO METERS, 1 is ONE METER, 2 is TWO METERS
    */
   uint8_t brake_mode = 0;
   uint8_t turn_light_color = 0;
@@ -484,19 +601,42 @@ int main (void) {
   while (1) {
     // Determines sampling rate
     // TODO: Figure out how to to dealsy because ultrasonic_ranger can't delay more than 1ms
-  	uint32_t start_count = app_timer_cnt_get();
   	nrf_delay_ms(1);
 
     for (int i=0; i<3; i++) {
       nrf_gpio_pin_toggle(LEDS[i]);
     }
-    pwm_update_color(1);
 
     // GET MEASUREMENTS AND INPUTS
+    /************************************** APP SETTINGS **********************************/
+    uint8_t app_info = 0;
+    sample_app();
+    app_info = get_app_info();
+
+    // Mask characteristic value to split into individual fields
+    brake_mode = (app_info & 0x3);
+    turn_light_color = (app_info & 0xC0) >> 6;
+    brake_light_color = (app_info & 0x30) >> 4;
+    proximity_dist = (app_info & 0xC) >> 2;
+    
+    // set distance_threshold to proper value based on config
+    if (proximity_dist == 0)
+    {
+      distance_threshold = 0;
+    }
+    else if (proximity_dist == 1)
+    {
+      distance_threshold = 100;
+    }
+    else
+    {
+      distance_threshold = 200;
+    }
+
     /************************************** TURNING **************************************/
     float x_acc, y_acc, z_acc;
     sample_9250_accelerometer(&x_acc, &y_acc, &z_acc);
-	// Add accelerometer sample
+	  // Add accelerometer sample
     bool turned_left = (y_acc > TURN_DETECTED_ACCEL_THRESH), turned_right = (y_acc < -TURN_DETECTED_ACCEL_THRESH);
     // check if button pressed
     bool ble_left = false;
@@ -514,17 +654,6 @@ int main (void) {
     }
 //    printf("timer: %i\n", button_press_time);
     bool left_turn, right_turn = false;
-    /************************************** APP SETTINGS **********************************/
-    uint8_t app_info = 0;
-    sample_app();
-    app_info = get_app_info();
-
-	// Mask characteristic value to split into individual fields
-    turn_light_color = (app_info & 0xC0) >> 6;
-	brake_light_color = (app_info & 0x30) >> 4;
-	proximity_dist = (app_info & 0xC) >> 2;
-	brake_mode = (app_info & 0x3);
-
 	/************************************** HALL EFFECT **************************************/
     // TODO: Implement hall-effect sensors to update velocity
     // Used to check left_turn and right_turn (i.e. tilted left/right && velocity > 0);
@@ -543,24 +672,24 @@ int main (void) {
     switch(brake_state) {
       case OFF: {
         //printf("Brake light is OFF\n");
-        pwm_update_color(2); // 2 is off
-        if (detected())
+        if (detected(brake_mode))
         {
-          printf("DETECTED BRAKE\n");
+          //printf("DETECTED BRAKE\n");
           brake_time_on = 0;
           brake_state = ON;
+          turn_on_brake_lights(brake_light_color);
         }
         break;
       }
       case ON: {
         //printf("Brake light is ON\n");
-        if (brake_time_on > 2 && !detected())
+        if (brake_time_on > BRAKE_LIGHT_ON_SECS && !detected(brake_mode))
         {
-          printf("Turning off brake lights\n");
+          //printf("Turning off brake lights\n");
+          turn_off_brake_lights();
           brake_time_on = 0;
           brake_state = OFF;
         }
-        pwm_update_color(1); // green
         break;
       }
     }
@@ -581,7 +710,7 @@ int main (void) {
       		num_in_a_row_left = 0;
       	}
 
-      	if (num_in_a_row_left >= LOOP_HOLD_AMOUNT && left_range <= DIST_THRESHOLD) // already happened 4 times and fifth is also true
+      	if (num_in_a_row_left >= LOOP_HOLD_AMOUNT && left_range <= distance_threshold) // already happened 4 times and fifth is also true
       	{
       		num_in_a_row_left = 0;
       		left_proximity_state = ON;
@@ -590,7 +719,7 @@ int main (void) {
         break;
       }
       case ON: {
-      	if (left_range > DIST_THRESHOLD)
+      	if (left_range > distance_threshold)
       	{
       		num_in_a_row_left += 1;
       	}
@@ -598,7 +727,7 @@ int main (void) {
       	{
       		num_in_a_row_left = 0;
       	}
-      	if (num_in_a_row_left >= LOOP_HOLD_AMOUNT && left_range > DIST_THRESHOLD)
+      	if (num_in_a_row_left >= LOOP_HOLD_AMOUNT && left_range > distance_threshold)
       	{
       		num_in_a_row_left = 0;
       		left_proximity_state = OFF;
@@ -619,7 +748,7 @@ int main (void) {
       		num_in_a_row_right = 0;
       	}
 
-      	if (num_in_a_row_right >= LOOP_HOLD_AMOUNT && right_range <= DIST_THRESHOLD) // already happened 4 times and fifth is also true
+      	if (num_in_a_row_right >= LOOP_HOLD_AMOUNT && right_range <= distance_threshold) // already happened 9 times and tenth is also true
       	{
       		num_in_a_row_right = 0;
       		right_proximity_state = ON;
@@ -636,7 +765,7 @@ int main (void) {
       	{
       		num_in_a_row_right = 0;
       	}
-      	if (num_in_a_row_right >= LOOP_HOLD_AMOUNT && right_range > DIST_THRESHOLD)
+      	if (num_in_a_row_right >= LOOP_HOLD_AMOUNT && right_range > distance_threshold)
       	{
       		num_in_a_row_right = 0;
       		right_proximity_state = OFF;
@@ -651,10 +780,14 @@ int main (void) {
       case OFF: {
         if (ble_left) {
           turn_state = LEFT;
+          turn_on_left_lights(turn_light_color);
+          turn_off_right_lights();
           left_turn = true;
           turn_time_on = 0;
         } else if (ble_right) {
           turn_state = RIGHT;
+          turn_off_left_lights();
+          turn_on_right_lights(turn_light_color);
           right_turn = true;
           turn_time_on = 0;
         } else {
@@ -665,44 +798,41 @@ int main (void) {
       }
       case LEFT: {
         if (ble_left || turn_time_on > 60 || turned_left) {
-          printf("ble_left: %i, turn_time: %i, turned_left: %i\n", ble_left, turn_time_on > 60, turned_left);
+          //printf("ble_left: %i, turn_time: %i, turned_left: %i\n", ble_left, turn_time_on > 60, turned_left);
           turn_state = OFF;
+          turn_off_left_lights();
+          // right is already off
         } else if (ble_right) {
           turn_state = RIGHT;
+          turn_off_left_lights();
+          turn_on_right_lights(turn_light_color);
           right_turn = true;
           turn_time_on = 0;
         } else {
           turn_state = LEFT;
           left_turn = true;
-          printf("IN STATE LEFT\n");
+          //printf("IN STATE LEFT\n");
         }
         break;
       }
       case RIGHT: {
         if (ble_right || turn_time_on > 60 || turned_right) {
           turn_state = OFF;
+          // left is already off
+          turn_off_right_lights();
         } else if (ble_left) {
           turn_state = LEFT;
+          turn_on_left_lights(turn_light_color);
+          turn_off_right_lights();
           left_turn = true;
           turn_time_on = 0;
         } else {
           turn_state = RIGHT;
           right_turn = true;
-          printf("IN STATE RIGHT\n");
+          //printf("IN STATE RIGHT\n");
         }
         break;
       }
     }
-
-    // Handle turn_state outputs
-    if (left_turn) {
-      // turn on left turn lights
-    } else if (right_turn) {
-      // turn on right turn lights
-    }
-
-    uint32_t end_count = app_timer_cnt_get();
-    uint32_t time_microsec = app_timer_ticks_to_usec(end_count - start_count);
-   // printf("Time to run loop: %d\n", time_microsec);
   }
 }
