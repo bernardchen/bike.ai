@@ -504,16 +504,10 @@ int main (void) {
 //    printf("timer: %i\n", button_press_time);
     bool left_turn, right_turn = false;
     /************************************** TURNING **************************************/
-    uint16_t brake_type = 0;
-    uint16_t brake_color = 0;
-    uint16_t turn_color = 0;
-    uint16_t motion_dist = 0;
+    uint8_t app_info = 0;
     sample_app();
-    brake_type = get_brake_type();
-    brake_color = get_brake_color();
-    turn_color = get_turn_color();
-    motion_dist = get_motion_dist();
-    printf("braketype %x, brakecolor %x, turncolor %x, motiondist %x\n", brake_type, brake_color, turn_color, motion_dist);
+    app_info = get_app_info();
+    printf("app info 0b%x\n", app_info);
 
     /************************************** HALL EFFECT **************************************/
     // TODO: Implement hall-effect sensors to update velocity

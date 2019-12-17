@@ -142,8 +142,8 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
           ble_gattc_evt_t const * p_gattc_evt = &p_ble_evt->evt.gattc_evt;
           ble_gattc_evt_read_rsp_t value_read = p_gattc_evt->params.read_rsp;
 
-          //printf("Value len: %i\n", value_read.len);
-          //printf("Values read: %d\n", value_read.data[0]);
+
+
           uint8_t ble_data = value_read.data[0];
           
 		  if (p_gattc_evt->conn_handle == left_conn_handle || p_gattc_evt->conn_handle == right_conn_handle) {
@@ -171,6 +171,11 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 				}
 		  // Else, reading from our app
 		  } else {
+            printf("Value len: %i\n", value_read.len);
+            printf("Values read: %d\n", value_read.data[0]);
+              printf("Values read: %d\n", value_read.data[1]);
+              printf("num handles!lasdjg %d\n", app_num_handles);
+              
 		  	app_info = ble_data;
 		  	err_code = sd_ble_gap_disconnect(app_conn_handle, BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
             APP_ERROR_CHECK(err_code);
@@ -397,10 +402,10 @@ void sample_buttons() {
 /**@brief Function to be called every time in the loop to update app info
  */
 void sample_app() {
-    if (app_num_handles > 0) {
+    if (app_num_handles > 0 && ble_conn_state_valid(app_conn_handle)) {
       ret_code_t err_code = sd_ble_gattc_read(app_conn_handle, app_info_handle, 0);
       if (err_code != NRF_ERROR_BUSY) {
-        APP_ERROR_CHECK(err_code);
+      //  APP_ERROR_CHECK(err_code);
       }
     }
 }
