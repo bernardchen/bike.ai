@@ -41,6 +41,7 @@ BLE_DB_DISCOVERY_ARRAY_DEF(m_db_disc, NRF_SDH_BLE_CENTRAL_LINK_COUNT);  /**< Dat
 NRF_BLE_SCAN_DEF(m_scan);                                               /**< Scanning Module instance. */
 
 static char const m_target_periph_name[] = "iTAG            ";             /**< Name of the device to try to connect to. This name is searched for in the scanning report data. */
+static char const app_name[] = "LIL";
 
 uint8_t left_connected = 0;
 uint16_t left_conn_handle = 0;
@@ -52,10 +53,16 @@ uint16_t right_conn_handle = 0;
 uint16_t right_char_handle = 0;
 uint16_t right_num_handles = 0;
 
+uint8_t app_connected = 0;
+uint16_t app_conn_handle = 0;
+uint16_t app_char_handle = 0;
+uint16_t app_num_handles = 0;
+
 // booleans representing whether or not left and right buttons have been pressed
 // main must call reset to say it has handled the button press
 bool left_is_pressed = false;
 bool right_is_pressed = false;
+uint16_t app_info = 0;
 
 static void scan_evt_handler(scan_evt_t const * p_scan_evt)
 {
@@ -99,6 +106,8 @@ static void scan_init(void)
 
     err_code = nrf_ble_scan_filter_set(&m_scan, SCAN_NAME_FILTER, m_target_periph_name);
     APP_ERROR_CHECK(err_code);
+    err_code = nrf_ble_scan_filter_set(&m_scan, SCAN_NAME_FILTER, app_name);
+    APP_ERROR_CHECK(err_code);
 
     printf("Filters set!\n");
 }
@@ -139,29 +148,34 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 
           //printf("Value len: %i\n", value_read.len);
           //printf("Values read: %d\n", value_read.data[0]);
-          int button_press_data = value_read.data[0];
-            if (button_press_data == 1) {
-                if (!left_is_pressed && p_gap_evt->conn_handle == left_conn_handle) {
-                    printf("LEFT BUTTON PRESSED!\n");
-                    left_is_pressed = true;
-                } else if (!right_is_pressed) {
-                    printf("RIGHT BUTTON PRESSED!\n");
-                    right_is_pressed = true;
-                }
-                
-                // RESET
-                ble_gattc_write_params_t write_params;
-                uint8_t value_to_write[1] = {0x00};       
+          uint8_t button_press_data = value_read.data[0];
+          
+		  if (p_gap_evt->conn_handle == left_conn_handle || p_gap_evt->conn_handle == right_conn_handle) {
+			  if (button_press_data == 1) {
+					if (!left_is_pressed && p_gap_evt->conn_handle == left_conn_handle) {
+						printf("LEFT BUTTON PRESSED!\n");
+						left_is_pressed = true;
+					} else if (!right_is_pressed) {
+						printf("RIGHT BUTTON PRESSED!\n");
+						right_is_pressed = true;
+					}
+					
+					// RESET
+					ble_gattc_write_params_t write_params;
+					uint8_t value_to_write[1] = {0x00};       
 
-                write_params.write_op = BLE_GATT_OP_WRITE_REQ;                      
-                write_params.handle   = left_char_handle;             
-                write_params.offset   = 0;                                                          
-                write_params.len      = 1;                                                              
-                write_params.p_value  = value_to_write;                                                 
-                
-                ret_code_t err_code = sd_ble_gattc_write(p_gap_evt->conn_handle, &write_params);
-                APP_ERROR_CHECK(err_code);
-            }
+					write_params.write_op = BLE_GATT_OP_WRITE_REQ;                      
+					write_params.handle   = left_char_handle;             
+					write_params.offset   = 0;                                                          
+					write_params.len      = 1;                                                              
+					write_params.p_value  = value_to_write;                                                 
+					
+					ret_code_t err_code = sd_ble_gattc_write(p_gap_evt->conn_handle, &write_params);
+					APP_ERROR_CHECK(err_code);
+				}
+		  } else {
+			app_info = button_press_data;
+		  }
         } break;
 
         // Upon connection, check which peripheral is connected, initiate DB
@@ -312,19 +326,27 @@ static void db_disc_handler(ble_db_discovery_evt_t * p_evt)
       printf("Something went wrong, Service not found\n");
     }
 
-    if (!left_connected) {
-        left_connected = 1;
-        left_conn_handle = p_evt->conn_handle;
-        left_char_handle = p_evt->params.discovered_db.charateristics[0].characteristic.handle_value;
-        left_num_handles = p_evt->params.discovered_db.char_count;
-        printf("LEFT:\n Conn_handle: %x\nChar_handles: %x\nNum_handles: %i\n", left_conn_handle, left_char_handle, left_num_handles);
-    } else {
-        right_connected = 1;
-        right_conn_handle = p_evt->conn_handle;
-        right_char_handle = p_evt->params.discovered_db.charateristics[0].characteristic.handle_value;
-        right_num_handles = p_evt->params.discovered_db.char_count;
-        printf("RIGHT:\n Conn_handle: %x\nChar_handles: %x\nNum_handles: %i\n", right_conn_handle, right_char_handle, right_num_handles);
-    }
+	if (p_evt->params.discovered_db.char_count == 1) {
+		if (!left_connected) {
+			left_connected = 1;
+			left_conn_handle = p_evt->conn_handle;
+			left_char_handle = p_evt->params.discovered_db.charateristics[0].characteristic.handle_value;
+			left_num_handles = p_evt->params.discovered_db.char_count;
+			printf("LEFT:\n Conn_handle: %x\nChar_handles: %x\nNum_handles: %i\n", left_conn_handle, left_char_handle, left_num_handles);
+		} else {
+			right_connected = 1;
+			right_conn_handle = p_evt->conn_handle;
+			right_char_handle = p_evt->params.discovered_db.charateristics[0].characteristic.handle_value;
+			right_num_handles = p_evt->params.discovered_db.char_count;
+			printf("RIGHT:\n Conn_handle: %x\nChar_handles: %x\nNum_handles: %i\n", right_conn_handle, right_char_handle, right_num_handles);
+		}
+	} else {
+		app_connected = 1;
+		app_conn_handle = p_evt->conn_handle;
+		app_char_handle = p_evt->params.discovered_db.charateristics[0].characteristic.handle_value;
+		app_num_handles = p_evt->params.discovered_db.char_count;
+		printf("APP:\n Conn_handle: %x\nChar_handles: %x\nNum_handles: %i\n", right_conn_handle, right_char_handle, right_num_handles);
+	}
 }
 
 
@@ -363,6 +385,18 @@ void sample_buttons() {
     }
 }
 
+/**@brief Function to be called every time in the loop to update app info
+ */
+void sample_app() {
+    if (app_num_handles > 0) {
+      ret_code_t err_code = sd_ble_gattc_read(app_conn_handle, app_char_handle, 0);
+      if (err_code != NRF_ERROR_BUSY) {
+        APP_ERROR_CHECK(err_code);
+      }
+    }
+}
+
+
 /**@brief Calls all the necessary inits to get BLE working
  */
 void ble_init(void)
@@ -388,6 +422,12 @@ bool get_left_pressed(void)
 bool get_right_pressed(void)
 {
     return right_is_pressed;
+}
+
+// return app info
+uint8_t get_app_info(void)
+{
+	return app_info;
 }
 
 // let's turn_ble.c know the button press has been read

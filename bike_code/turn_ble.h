@@ -21,3 +21,9 @@ bool get_right_pressed(void);
 // read another press
 void reset_left_button(void);
 void reset_right_button(void);
+
+// sample the app information
+void sample_app();
+
+// get the app info information
+uint8_t get_app_info(void);

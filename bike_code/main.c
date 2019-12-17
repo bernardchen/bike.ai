@@ -483,6 +483,7 @@ int main (void) {
     for (int i=0; i<3; i++) {
       nrf_gpio_pin_toggle(LEDS[i]);
     }
+    pwm_update_color(1);
 
     // GET MEASUREMENTS AND INPUTS
     /************************************** TURNING **************************************/
