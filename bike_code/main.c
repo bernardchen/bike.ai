@@ -428,25 +428,27 @@ bool detected_non_residual(void){
 // need to fix a bit for both of these functions residual detected function
 // standard deviation and mean based method1
 bool detected_residual(void){
-//    double x;double y;double z;
-//    sample_accel(&x,&y,&z);
-//    if (x > 0.0){
-//        return false;
-//    }
-//    int length = 0;
-//    if (counter < 100){
-//        length = counter/2;
-//    }
-//    values[counter] = (x*-1-values[]);
-//    double median; double upper_iqr; double lower_iqr;
-//    stats(&median,&upper_iqr,&lower_iqr);
-//    if (x*-1 > upper_iqr || x*-1 < lower_iqr){
+    double x;double y;double z;
+    sample_accel(&x,&y,&z);
+    if (x > 0.0){
+        return false;
+    }
+    int length = 0;
+    if (counter < SAMPLE_SIZE){
+        length = counter/2;
+    } else {
+        length = SAMPLE_SIZE/2;
+   }
+    values[counter] = (x*-1 - values[length]);
+    double median; double upper_iqr; double lower_iqr;
+    stats(&median,&upper_iqr,&lower_iqr);
+    if (x > upper_iqr || x < lower_iqr){
 //        printf("OUTLIAR");
 //        printf("\n upper %f\n",upper_iqr);
 //        printf("\n lower %f\n",lower_iqr);
 //        printf("\n value %f\n",x*-1);
-//        return true;
-//    }
+        return true;
+    }
     return false;
 }
 // main detected funciton that will call the proper one
