@@ -48,6 +48,7 @@
 #define X_CHANNEL 0
 #define Y_CHANNEL 1
 #define Z_CHANNEL 2
+#define SAMPLE_SIZE 50
 
 // ultrasonic ranger proximity constants
 #define LOOP_HOLD_AMOUNT (9) // number of loops that a ultrasonic ranger needs to be held for it to change
@@ -320,10 +321,6 @@ void pwm_update_color(uint8_t color)
         // We assume they want to play yellow
         nrf_drv_pwm_simple_playback(&m_pwm0, &green_seq, 40, NRF_DRV_PWM_FLAG_STOP);
         nrf_drv_pwm_simple_playback(&m_pwm1, &green_seq, 40, NRF_DRV_PWM_FLAG_STOP);
-        nrf_delay_ms(1000);
-        nrf_drv_pwm_simple_playback(&m_pwm0, &off_seq, 40, NRF_DRV_PWM_FLAG_STOP);
-        nrf_drv_pwm_simple_playback(&m_pwm1, &off_seq, 40, NRF_DRV_PWM_FLAG_STOP);
-        nrf_delay_ms(1000);
 
 
     }
@@ -368,7 +365,7 @@ void led_init(void){
 }
 
 /************************* Brake detection *************************/
-double values[100];
+double values[SAMPLE_SIZE];
 int counter = 0;
 static int compare (const void * a, const void * b)
 {
@@ -504,7 +501,7 @@ int main (void) {
       button_press_time = 0;
       reset_right_button();
     }
-    printf("timer: %i\n", button_press_time);
+//    printf("timer: %i\n", button_press_time);
     bool left_turn, right_turn = false;
 
     /************************************** HALL EFFECT **************************************/
@@ -517,14 +514,14 @@ int main (void) {
     /************************************** PROXIMITY **************************************/
     left_range = ultrasonic_get_left_distance_cm();
     right_range = ultrasonic_get_right_distance_cm();
-    printf("Ultrasonic LEFT ranger range: %ld\n", left_range);
-    printf("Ultrasonic RIGHT ranger range: %ld\n", right_range);
+  //  printf("Ultrasonic LEFT ranger range: %ld\n", left_range);
+   // printf("Ultrasonic RIGHT ranger range: %ld\n", right_range);
 
     // STATE MACHINES
     // State machine for brake
     switch(brake_state) {
       case OFF: {
-        printf("Brake light is OFF\n");
+        //printf("Brake light is OFF\n");
         pwm_update_color(2); // 2 is off
         if (detected())
         {
@@ -535,7 +532,7 @@ int main (void) {
         break;
       }
       case ON: {
-        printf("Brake light is ON\n");
+        //printf("Brake light is ON\n");
         if (brake_time_on > 2 && !detected())
         {
           printf("Turning off brake lights\n");
@@ -547,7 +544,7 @@ int main (void) {
       }
     }
     counter +=1;
-    counter = counter % 100;
+    counter = counter % SAMPLE_SIZE;
 
     // State machine for proximity sensors
     // will only change if there are LOOP_HOLD_AMOUNT times in a row
@@ -641,7 +638,7 @@ int main (void) {
           turn_time_on = 0;
         } else {
           turn_state = OFF;
-          printf("IN STATE OFF\n");
+         // printf("IN STATE OFF\n");
         }
         break;
       }
@@ -685,6 +682,6 @@ int main (void) {
 
     uint32_t end_count = app_timer_cnt_get();
     uint32_t time_microsec = app_timer_ticks_to_usec(end_count - start_count);
-    printf("Time to run loop: %d\n", time_microsec);
+   // printf("Time to run loop: %d\n", time_microsec);
   }
 }
