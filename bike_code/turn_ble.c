@@ -44,17 +44,17 @@ static char const m_target_periph_name[] = "iTAG            ";             /**< 
 static char const app_name[] = "LIL";
 
 uint8_t left_connected = 0;
-uint16_t left_conn_handle = 0;
+uint16_t left_conn_handle = 999;
 uint16_t left_char_handle = 0;
 uint16_t left_num_handles = 0;
 
 uint8_t right_connected = 0;
-uint16_t right_conn_handle = 0;
+uint16_t right_conn_handle = 999;
 uint16_t right_char_handle = 0;
 uint16_t right_num_handles = 0;
 
 uint8_t app_connected = 0;
-uint16_t app_conn_handle = 0;
+uint16_t app_conn_handle = 999;
 uint16_t app_brake_color_handle = 0;
 uint16_t app_turn_color_handle = 0;
 uint16_t app_brake_type_handle = 0;
@@ -228,19 +228,19 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             if (p_gap_evt->conn_handle == left_conn_handle) {
                 printf("LEFT DISCONNECTED\n");
                 left_connected = 0;
-                left_conn_handle = 0;
+                left_conn_handle = 999;
                 left_char_handle = 0;
                 left_num_handles = 0;
 			} else if (p_gap_evt->conn_handle == app_conn_handle) {
                 printf("APP DISCONNECTED\n");
                 app_connected = 0;
-                app_conn_handle = 0;
+                app_conn_handle = 999;
                 app_char_handle = 0;
                 app_num_handles = 0;
             } else {
                 printf("RIGHT DISCONNECTED\n");
                 right_connected = 0;
-                right_conn_handle = 0;
+                right_conn_handle = 999;
                 right_char_handle = 0;
                 right_num_handles = 0;
             }
