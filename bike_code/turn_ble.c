@@ -178,12 +178,18 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 		  // Else, reading from our app
 		  } else {
 			if (value_read.handle == app_brake_color_handle) {
+                printf("updated brake color\n");
 				app_brake_color = ble_data;
 			} else if (value_read.handle == app_turn_color_handle) {
+                printf("updated app turn color\n");
 				app_turn_color = ble_data;
 			} else if (value_read.handle == app_motion_handle) {
+                printf("updated motion dist\n");
 				app_motion = ble_data;
+                err_code = sd_ble_gap_disconnect(app_conn_handle, BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
+                APP_ERROR_CHECK(err_code);
 			} else if (value_read.handle == app_brake_type_handle) {
+                printf("updated app brake type\n");
 				app_brake_type = ble_data;
 			} 
 		  }
@@ -235,14 +241,19 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
                 printf("APP DISCONNECTED\n");
                 app_connected = 0;
                 app_conn_handle = 999;
-                app_char_handle = 0;
+                app_brake_type_handle = 0;
+                app_brake_color_handle = 0;
+                app_turn_color_handle = 0;
+                app_motion_handle = 0;
                 app_num_handles = 0;
-            } else {
+            } else if (p_gap_evt->conn_handle == right_conn_handle){
                 printf("RIGHT DISCONNECTED\n");
                 right_connected = 0;
                 right_conn_handle = 999;
                 right_char_handle = 0;
                 right_num_handles = 0;
+            } else {
+                printf("DISCONNECTED FROM UNKNOWN HANDLE\n");
             }
 
             // Start scanning.
@@ -362,12 +373,13 @@ static void db_disc_handler(ble_db_discovery_evt_t * p_evt)
 	} else if (p_evt->params.discovered_db.char_count == 4) {
 		app_connected = 1;
 		app_conn_handle = p_evt->conn_handle;
-		app_brake_type_handle = p_evt->params.discovered_db.charateristics[0].characteristic.handle_value;
-		app_motion_handle = p_evt->params.discovered_db.charateristics[1].characteristic.handle_value;
-		app_brake_color_handle = p_evt->params.discovered_db.charateristics[2].characteristic.handle_value;
-		app_turn_color_handle = p_evt->params.discovered_db.charateristics[3].characteristic.handle_value;
+		app_brake_type_handle = p_evt->params.discovered_db.charateristics[2].characteristic.handle_value;
+		app_motion_handle = p_evt->params.discovered_db.charateristics[3].characteristic.handle_value;
+		app_brake_color_handle = p_evt->params.discovered_db.charateristics[1].characteristic.handle_value;
+		app_turn_color_handle = p_evt->params.discovered_db.charateristics[0].characteristic.handle_value;
 		app_num_handles = p_evt->params.discovered_db.char_count;
 		printf("APP:\n Conn_handle: %x\nNum_handles: %i\n", app_conn_handle, app_num_handles);
+        printf("%x | %x | %x | %x\n", app_turn_color_handle, app_brake_color_handle, app_brake_type_handle, app_motion_handle);
 	}
 }
 
@@ -415,18 +427,25 @@ void sample_app() {
       if (err_code != NRF_ERROR_BUSY) {
         APP_ERROR_CHECK(err_code);
       }
-      ret_code_t err_code = sd_ble_gattc_read(app_conn_handle, app_brake_color_handle, 0);
-      if (err_code != NRF_ERROR_BUSY) {
+    
+        while (err_code == NRF_ERROR_BUSY) {
+      err_code = sd_ble_gattc_read(app_conn_handle, app_brake_color_handle, 0);
+            printf("In hereeeeee\n");
+        }
+      APP_ERROR_CHECK(err_code);
+
+          while (err_code == NRF_ERROR_BUSY) {
+        err_code = sd_ble_gattc_read(app_conn_handle, app_turn_color_handle, 0);
+          }
         APP_ERROR_CHECK(err_code);
-      }
-      ret_code_t err_code = sd_ble_gattc_read(app_conn_handle, app_turn_color_handle, 0);
-      if (err_code != NRF_ERROR_BUSY) {
+        
+          while (err_code == NRF_ERROR_BUSY) {
+        err_code = sd_ble_gattc_read(app_conn_handle, app_motion_handle, 0);
+          }
         APP_ERROR_CHECK(err_code);
-      }
-      ret_code_t err_code = sd_ble_gattc_read(app_conn_handle, app_motion_handle, 0);
-      if (err_code != NRF_ERROR_BUSY) {
-        APP_ERROR_CHECK(err_code);
-      }
+        
+//      err_code = sd_ble_gap_disconnect(app_conn_handle, BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
+//      APP_ERROR_CHECK(err_code);
     }
 }
 
@@ -473,7 +492,7 @@ uint16_t get_turn_color(void)
 	return app_turn_color;
 }
 
-uint8_t get_motion_dist(void)
+uint16_t get_motion_dist(void)
 {
 	return app_motion;
 }
