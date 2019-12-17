@@ -55,14 +55,20 @@ uint16_t right_num_handles = 0;
 
 uint8_t app_connected = 0;
 uint16_t app_conn_handle = 0;
-uint16_t app_char_handle = 0;
+uint16_t app_brake_color_handle = 0;
+uint16_t app_turn_color_handle = 0;
+uint16_t app_brake_type_handle = 0;
+uint16_t app_motion_handle = 0;
 uint16_t app_num_handles = 0;
 
 // booleans representing whether or not left and right buttons have been pressed
 // main must call reset to say it has handled the button press
 bool left_is_pressed = false;
 bool right_is_pressed = false;
-uint16_t app_info = 0;
+uint16_t app_brake_color = 0;
+uint16_t app_turn_color = 0;
+uint16_t app_brake_type = 0;
+uint16_t app_motion = 0;
 
 static void scan_evt_handler(scan_evt_t const * p_scan_evt)
 {
@@ -137,10 +143,6 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 
     switch (p_ble_evt->header.evt_id)
     {
-        // case BLE_GATTC_EVT_WRITE_RSP:
-        // {
-        //     printf("WRITTEN!\n");
-        // } break;
         case BLE_GATTC_EVT_READ_RSP:
         {
           ble_gattc_evt_t const * p_gattc_evt = &p_ble_evt->evt.gattc_evt;
@@ -148,14 +150,14 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 
           //printf("Value len: %i\n", value_read.len);
           //printf("Values read: %d\n", value_read.data[0]);
-          uint8_t button_press_data = value_read.data[0];
+          uint8_t ble_data = value_read.data[0];
           
-		  if (p_gap_evt->conn_handle == left_conn_handle || p_gap_evt->conn_handle == right_conn_handle) {
-			  if (button_press_data == 1) {
-					if (!left_is_pressed && p_gap_evt->conn_handle == left_conn_handle) {
+		  if (p_gattc_evt->conn_handle == left_conn_handle || p_gattc_evt->conn_handle == right_conn_handle) {
+			  if (ble_data == 1) {
+					if (!left_is_pressed && p_gattc_evt->conn_handle == left_conn_handle) {
 						printf("LEFT BUTTON PRESSED!\n");
 						left_is_pressed = true;
-					} else if (!right_is_pressed) {
+					} else if (!right_is_pressed && p_gattc_evt->conn_handle == right_conn_handle) {
 						printf("RIGHT BUTTON PRESSED!\n");
 						right_is_pressed = true;
 					}
@@ -173,8 +175,17 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 					ret_code_t err_code = sd_ble_gattc_write(p_gap_evt->conn_handle, &write_params);
 					APP_ERROR_CHECK(err_code);
 				}
+		  // Else, reading from our app
 		  } else {
-			app_info = button_press_data;
+			if (value_read.handle == app_brake_color_handle) {
+				app_brake_color = ble_data;
+			} else if (value_read.handle == app_turn_color_handle) {
+				app_turn_color = ble_data;
+			} else if (value_read.handle == app_motion_handle) {
+				app_motion = ble_data;
+			} else if (value_read.handle == app_brake_type_handle) {
+				app_brake_type = ble_data;
+			} 
 		  }
         } break;
 
@@ -332,6 +343,7 @@ static void db_disc_handler(ble_db_discovery_evt_t * p_evt)
       printf("Something went wrong, Service not found\n");
     }
 
+	// Button service has one characteristic
 	if (p_evt->params.discovered_db.char_count == 1) {
 		if (!left_connected) {
 			left_connected = 1;
@@ -346,12 +358,16 @@ static void db_disc_handler(ble_db_discovery_evt_t * p_evt)
 			right_num_handles = p_evt->params.discovered_db.char_count;
 			printf("RIGHT:\n Conn_handle: %x\nChar_handles: %x\nNum_handles: %i\n", right_conn_handle, right_char_handle, right_num_handles);
 		}
-	} else if (p_evt->params.discovered_db.char_count == 2) {
+	// App service four characteristics
+	} else if (p_evt->params.discovered_db.char_count == 4) {
 		app_connected = 1;
 		app_conn_handle = p_evt->conn_handle;
-		app_char_handle = p_evt->params.discovered_db.charateristics[0].characteristic.handle_value;
+		app_brake_type_handle = p_evt->params.discovered_db.charateristics[0].characteristic.handle_value;
+		app_motion_handle = p_evt->params.discovered_db.charateristics[1].characteristic.handle_value;
+		app_brake_color_handle = p_evt->params.discovered_db.charateristics[2].characteristic.handle_value;
+		app_turn_color_handle = p_evt->params.discovered_db.charateristics[3].characteristic.handle_value;
 		app_num_handles = p_evt->params.discovered_db.char_count;
-		printf("APP:\n Conn_handle: %x\nChar_handles: %x\nNum_handles: %i\n", right_conn_handle, right_char_handle, right_num_handles);
+		printf("APP:\n Conn_handle: %x\nNum_handles: %i\n", app_conn_handle, app_num_handles);
 	}
 }
 
@@ -395,7 +411,19 @@ void sample_buttons() {
  */
 void sample_app() {
     if (app_num_handles > 0) {
-      ret_code_t err_code = sd_ble_gattc_read(app_conn_handle, app_char_handle, 0);
+      ret_code_t err_code = sd_ble_gattc_read(app_conn_handle, app_brake_type_handle, 0);
+      if (err_code != NRF_ERROR_BUSY) {
+        APP_ERROR_CHECK(err_code);
+      }
+      ret_code_t err_code = sd_ble_gattc_read(app_conn_handle, app_brake_color_handle, 0);
+      if (err_code != NRF_ERROR_BUSY) {
+        APP_ERROR_CHECK(err_code);
+      }
+      ret_code_t err_code = sd_ble_gattc_read(app_conn_handle, app_turn_color_handle, 0);
+      if (err_code != NRF_ERROR_BUSY) {
+        APP_ERROR_CHECK(err_code);
+      }
+      ret_code_t err_code = sd_ble_gattc_read(app_conn_handle, app_motion_handle, 0);
       if (err_code != NRF_ERROR_BUSY) {
         APP_ERROR_CHECK(err_code);
       }
@@ -430,10 +458,24 @@ bool get_right_pressed(void)
     return right_is_pressed;
 }
 
-// return app info
-uint8_t get_app_info(void)
+uint16_t get_brake_type(void)
 {
-	return app_info;
+	return app_brake_type;
+}
+
+uint16_t get_brake_color(void)
+{
+	return app_brake_color;
+}
+
+uint16_t get_turn_color(void)
+{
+	return app_turn_color;
+}
+
+uint8_t get_motion_dist(void)
+{
+	return app_motion;
 }
 
 // let's turn_ble.c know the button press has been read
