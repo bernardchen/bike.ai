@@ -42,11 +42,12 @@ class View: UIViewController,UITextFieldDelegate {
               let val3 = String(dist,radix: 2)
               let val4 = String(autoBrake,radix: 2)
               let serialized = "\(val1)\(val2)\(val3)\(val4)"
-              print(serialized)
+              let converted = UInt8(Int(serialized, radix: 2)!)
+              print(converted)
                               let characteristic1 = CBMutableCharacteristic(
                                                   type: characteristicUUID,
                                                   properties: properties,
-                                                  value: Data(serialized.utf8),
+                                                  value: Data([converted]),
                                                   permissions: permissions)
               let characteristic2 = CBMutableCharacteristic(
               type: characteristicUUID,
