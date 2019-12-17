@@ -244,6 +244,7 @@
                     </view>
                     <navigationItem key="navigationItem" id="9DL-Vo-AwN"/>
                     <connections>
+                        <outlet property="myMap" destination="omG-8Y-8sY" id="9hZ-b7-MKW"/>
                         <outlet property="myTextField" destination="Bbt-Zg-PqU" id="HWa-Qc-bXs"/>
                     </connections>
                 </viewController>

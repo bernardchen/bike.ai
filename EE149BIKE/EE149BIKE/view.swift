@@ -15,6 +15,8 @@
 //
 import CoreBluetooth
 import UIKit
+import MapKit
+import CoreLocation
 
 class View: UIViewController,UITextFieldDelegate {
     var brakeColor = 2
@@ -22,6 +24,7 @@ class View: UIViewController,UITextFieldDelegate {
     var autoBrake = 1
     var dist = 0
     
+    @IBOutlet weak var myMap: MKMapView!
     @IBAction func doneSetting(_ sender: Any) {
         let temp = peripheralManager as! CBPeripheralManager?
         temp?.removeAllServices()
@@ -30,6 +33,7 @@ class View: UIViewController,UITextFieldDelegate {
         } else {
         print("There is Power")
              let temp = peripheralManager as! CBPeripheralManager?
+            
              let advertisementData = [CBAdvertisementDataLocalNameKey:
                   "LIL"]
               let serviceUUID = CBUUID(string: "FFE0")
@@ -106,12 +110,14 @@ class View: UIViewController,UITextFieldDelegate {
         turnColor = 2
     }
     var peripheralManager: CBManager?
+   // var locationManager = CLLocationManager()
+
 
 
        override func viewDidLoad() {
            super.viewDidLoad()
         self.myTextField.delegate = self
-
+        myMap.showsUserLocation = true
         peripheralManager = CBPeripheralManager(delegate: self, queue: nil).self
         let temp = peripheralManager as! CBPeripheralManager?
                  
