@@ -55,7 +55,7 @@
 
 // turn signal constants
 #define TURN_DETECTED_ACCEL_THRESH (0.4)
-#define TURN_TIMEOUT (5)
+#define TURN_TIMEOUT (10)
 
 // LED constants
 #define OUTPUT_PIN_BRAKE (12)
@@ -223,15 +223,28 @@ static void set_up_app_timer(void)
 uint32_t turn_time_on = 0; // turn_time_on used for turn signal state machine
 uint32_t button_press_time = 0;
 uint32_t brake_time_on = 0; // brake_time_on used for brake state machine
+bool light_toggle = true;
+bool pwm_set = false;
+uint8_t millisec_counter = 0; // to count to four to make sure other counters only change on the second
 void main_timer_callback() {
-  turn_time_on++;
-  button_press_time++;
-  brake_time_on++;
+  if (millisec_counter == 3)
+  {
+    millisec_counter = 0;
+    turn_time_on++;
+    button_press_time++;
+    brake_time_on++;  
+  }
+  else
+  {
+    millisec_counter++;
+  }
+  light_toggle = !light_toggle;
+  pwm_set = true;
 }
 
 void init_main_timer() {
   app_timer_create(&main_timer, APP_TIMER_MODE_REPEATED, (app_timer_timeout_handler_t) main_timer_callback);
-  app_timer_start(main_timer, APP_TIMER_TICKS(1000), NULL); // 1000 milliseconds
+  app_timer_start(main_timer, APP_TIMER_TICKS(250), NULL); // 1000 milliseconds
   printf("Timer initialized\n");
 }
 
@@ -321,32 +334,6 @@ nrf_pwm_sequence_t const off_seq =
     .repeats         = 0,
     .end_delay       = 0
 };
-
-
-
-
-
-
-// Set duty cycle between 0 and 100%
-void pwm_update_color(uint8_t color)
-{
-    if (color == 0){
-        // We perform playback for red
-        nrf_drv_pwm_simple_playback(&m_pwm0, &red_seq, 1, NRF_DRV_PWM_FLAG_LOOP);
-    } else if (color == 1){
-        // We perform playback for green
-        nrf_drv_pwm_simple_playback(&m_pwm0, &green_seq, 40, NRF_DRV_PWM_FLAG_STOP);
-    } else {
-        // We assume they want to play yellow
-        nrf_drv_pwm_simple_playback(&m_pwm0, &green_seq, 40, NRF_DRV_PWM_FLAG_STOP);
-        nrf_drv_pwm_simple_playback(&m_pwm1, &green_seq, 40, NRF_DRV_PWM_FLAG_STOP);
-
-
-    }
-}
-
-
-
 
 
 void pwm_init(void)
@@ -540,7 +527,42 @@ void turn_on_right_lights(uint8_t brake_color)
   }
 }
  
+// make turn lights flash
+void turn_left_blink(uint8_t color)
+{
+    if (pwm_set)
+    {
 
+    
+    if (light_toggle)
+    {
+      turn_on_left_lights(color);
+    }
+    else
+    {
+      turn_off_left_lights();
+    }
+    pwm_set = false;
+    }   
+}
+void turn_right_blink(uint8_t color)
+{
+    if (pwm_set)
+    {
+
+    
+    if (light_toggle)
+    {
+      turn_on_right_lights(color);
+    }
+    else
+    {
+      turn_off_right_lights();
+    }
+    pwm_set = false;
+
+    }
+}
 
 typedef enum {
   RIGHT,
@@ -619,7 +641,7 @@ int main (void) {
     turn_light_color = (app_info >> 6) & 0x3;
     brake_light_color = (app_info >> 4) & 0x3;
     proximity_dist = (app_info >> 2) & 0x3;
-    // printf("appinfo: %d, turn %d, brake %d, proximity %d, mode %d\n", app_info, turn_light_color, brake_light_color, proximity_dist, brake_mode);
+    //printf("appinfo: %d, turn %d, brake %d, proximity %d, mode %d\n", app_info, turn_light_color, brake_light_color, proximity_dist, brake_mode);
     
     // set distance_threshold to proper value based on config
     if (proximity_dist == 0)
@@ -655,7 +677,7 @@ int main (void) {
       reset_right_button();
     }
 //    printf("timer: %i\n", button_press_time);
-    bool left_turn, right_turn = false;
+    bool left_turn = false, right_turn = false;
 	/************************************** HALL EFFECT **************************************/
     // TODO: Implement hall-effect sensors to update velocity
     // Used to check left_turn and right_turn (i.e. tilted left/right && velocity > 0);
@@ -671,12 +693,14 @@ int main (void) {
 
     // STATE MACHINES
     // State machine for brake
+    //printf("brake color %d\n", brake_light_color);
     switch(brake_state) {
       case OFF: {
         //printf("Brake light is OFF\n");
         if (detected(brake_mode))
         {
           //printf("DETECTED BRAKE\n");
+          //printf("BRAKE COLOR %d\n", brake_light_color);
           brake_time_on = 0;
           brake_state = ON;
           turn_on_brake_lights(brake_light_color);
@@ -802,13 +826,15 @@ int main (void) {
         if (ble_left || turn_time_on > TURN_TIMEOUT || turned_left) {
           //printf("ble_left: %i, turn_time: %i, turned_left: %i\n", ble_left, turn_time_on > 60, turned_left);
           turn_state = OFF;
+          left_turn = false;
           turn_off_left_lights();
-          // right is already off
+          turn_off_right_lights();
         } else if (ble_right) {
           turn_state = RIGHT;
           turn_off_left_lights();
           turn_on_right_lights(turn_light_color);
           right_turn = true;
+          left_turn = false;
           turn_time_on = 0;
         } else {
           turn_state = LEFT;
@@ -820,13 +846,15 @@ int main (void) {
       case RIGHT: {
         if (ble_right || turn_time_on > TURN_TIMEOUT || turned_right) {
           turn_state = OFF;
-          // left is already off
+          right_turn = false;
+          turn_off_left_lights();
           turn_off_right_lights();
         } else if (ble_left) {
           turn_state = LEFT;
           turn_on_left_lights(turn_light_color);
           turn_off_right_lights();
           left_turn = true;
+          right_turn = false;
           turn_time_on = 0;
         } else {
           turn_state = RIGHT;
@@ -835,6 +863,15 @@ int main (void) {
         }
         break;
       }
+    }
+
+    if (left_turn)
+    {
+      turn_left_blink(turn_light_color);
+    }
+    else if (right_turn)
+    {
+      turn_right_blink(turn_light_color);
     }
   }
 }
