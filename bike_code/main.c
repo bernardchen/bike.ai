@@ -55,6 +55,7 @@
 
 // turn signal constants
 #define TURN_DETECTED_ACCEL_THRESH (0.4)
+#define TURN_TIMEOUT (5)
 
 // LED constants
 #define OUTPUT_PIN_BRAKE (12)
@@ -62,7 +63,7 @@
 #define OUTPUT_PIN_RIGHT_TURN (11)
 
 // brake constants
-#define BRAKE_LIGHT_ON_SECS (3)
+#define BRAKE_LIGHT_ON_SECS (1)
 
 // Create timer
 APP_TIMER_DEF(main_timer);
@@ -415,8 +416,8 @@ void stats(double* median, double* upper_iqr, double* lower_iqr){
   qsort (values, length, sizeof(double), compare);  
   *median = values[length/2];
   double iqr = values[(3*length)/4]-values[length/4];
-  *upper_iqr = (iqr)*7 + values[3*length/4];
-  *lower_iqr = values[length/4] - (iqr)*7;
+  *upper_iqr = (iqr)*2.75 + values[3*length/4];
+  *lower_iqr = values[length/4] - (iqr)*2.75;
 }
 // standard deviation and mean based method1
 bool detected_non_residual(void){
@@ -594,8 +595,8 @@ int main (void) {
    */
   uint8_t brake_mode = 0;
   uint8_t turn_light_color = 0;
-  uint8_t brake_light_color = 0;
-  uint8_t proximity_dist = 0;
+  uint8_t brake_light_color = 1;
+  uint8_t proximity_dist = 2;
 
   // Loop forever
   while (1) {
@@ -615,9 +616,10 @@ int main (void) {
 
     // Mask characteristic value to split into individual fields
     brake_mode = (app_info & 0x3);
-    turn_light_color = (app_info & 0xC0) >> 6;
-    brake_light_color = (app_info & 0x30) >> 4;
-    proximity_dist = (app_info & 0xC) >> 2;
+    turn_light_color = (app_info >> 6) & 0x3;
+    brake_light_color = (app_info >> 4) & 0x3;
+    proximity_dist = (app_info >> 2) & 0x3;
+    // printf("appinfo: %d, turn %d, brake %d, proximity %d, mode %d\n", app_info, turn_light_color, brake_light_color, proximity_dist, brake_mode);
     
     // set distance_threshold to proper value based on config
     if (proximity_dist == 0)
@@ -637,7 +639,7 @@ int main (void) {
     float x_acc, y_acc, z_acc;
     sample_9250_accelerometer(&x_acc, &y_acc, &z_acc);
 	  // Add accelerometer sample
-    bool turned_left = (y_acc > TURN_DETECTED_ACCEL_THRESH), turned_right = (y_acc < -TURN_DETECTED_ACCEL_THRESH);
+    bool turned_left = (y_acc < -TURN_DETECTED_ACCEL_THRESH), turned_right = (y_acc > TURN_DETECTED_ACCEL_THRESH);
     // check if button pressed
     bool ble_left = false;
     bool ble_right = false;
@@ -797,7 +799,7 @@ int main (void) {
         break;
       }
       case LEFT: {
-        if (ble_left || turn_time_on > 60 || turned_left) {
+        if (ble_left || turn_time_on > TURN_TIMEOUT || turned_left) {
           //printf("ble_left: %i, turn_time: %i, turned_left: %i\n", ble_left, turn_time_on > 60, turned_left);
           turn_state = OFF;
           turn_off_left_lights();
@@ -816,7 +818,7 @@ int main (void) {
         break;
       }
       case RIGHT: {
-        if (ble_right || turn_time_on > 60 || turned_right) {
+        if (ble_right || turn_time_on > TURN_TIMEOUT || turned_right) {
           turn_state = OFF;
           // left is already off
           turn_off_right_lights();

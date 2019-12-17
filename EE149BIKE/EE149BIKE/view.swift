@@ -41,12 +41,28 @@ class View: UIViewController,UITextFieldDelegate {
                                let characteristicUUID = CBUUID(string: "FFE1")
               let properties: CBCharacteristicProperties = [.read]
               let permissions: CBAttributePermissions = [.readable]
-              let val1 = String(turnColor,radix: 2)
-              let val2 = String(brakeColor,radix: 2)
-              let val3 = String(dist,radix: 2)
-              let val4 = String(autoBrake,radix: 2)
+              var val1 = String(turnColor,radix: 2)
+              var val2 = String(brakeColor,radix: 2)
+              var val3 = String(dist,radix: 2)
+              var val4 = String(autoBrake,radix: 2)
+            if (val1 == "0" || val1 == "1"){
+                val1 = "0" + val1
+            }
+            if (val2 == "0" || val2 == "1"){
+                           val2 = "0" + val2
+                       }
+            if (val3 == "0" || val3 == "1"){
+                           val3 = "0" + val3
+                       }
+            if (val4 == "0" || val4 == "1"){
+                           val4 = "0" + val4
+                       }
+         
+               print(val1,val2,val3,val4)
               let serialized = "\(val1)\(val2)\(val3)\(val4)"
               let converted = UInt8(Int(serialized, radix: 2)!)
+              print(val1)
+            print("YUH")
               print(converted)
                               let characteristic1 = CBMutableCharacteristic(
                                                   type: characteristicUUID,

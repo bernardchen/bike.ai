@@ -62,7 +62,9 @@ uint16_t app_num_handles = 0;
 // main must call reset to say it has handled the button press
 bool left_is_pressed = false;
 bool right_is_pressed = false;
-uint8_t app_info = 0;
+// turn-green brake-red proximity-2meters mode-nonresidual
+// 00 01 10 00
+uint8_t app_info = 24;
 
 static void scan_evt_handler(scan_evt_t const * p_scan_evt)
 {
@@ -173,9 +175,6 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 		  } else {
             printf("Value len: %i\n", value_read.len);
             printf("Values read: %d\n", value_read.data[0]);
-              printf("Values read: %d\n", value_read.data[1]);
-              printf("num handles!lasdjg %d\n", app_num_handles);
-              
 		  	app_info = ble_data;
 		  	err_code = sd_ble_gap_disconnect(app_conn_handle, BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
             APP_ERROR_CHECK(err_code);
