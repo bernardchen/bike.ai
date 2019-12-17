@@ -26,7 +26,4 @@ void reset_right_button(void);
 void sample_app();
 
 // Retrieve information from app (Call after sample_app())
-uint16_t get_brake_type(void);
-uint16_t get_brake_color(void);
-uint16_t get_turn_color(void);
-uint16_t get_motion_dist(void);
+uint8_t get_app_info(void);
