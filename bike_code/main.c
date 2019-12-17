@@ -48,7 +48,7 @@
 #define X_CHANNEL 0
 #define Y_CHANNEL 1
 #define Z_CHANNEL 2
-#define SAMPLE_SIZE 50
+#define SAMPLE_SIZE 40
 
 // ultrasonic ranger proximity constants
 #define LOOP_HOLD_AMOUNT (9) // number of loops that a ultrasonic ranger needs to be held for it to change
@@ -57,9 +57,9 @@
 #define TURN_DETECTED_ACCEL_THRESH (0.4)
 
 // LED constants
-#define OUTPUT_PIN_BRAKE (26)
-#define OUTPUT_PIN_LEFT_TURN (21)
-#define OUTPUT_PIN_RIGHT_TURN (12)
+#define OUTPUT_PIN_BRAKE (12)
+#define OUTPUT_PIN_LEFT_TURN (26)
+#define OUTPUT_PIN_RIGHT_TURN (11)
 
 // brake constants
 #define BRAKE_LIGHT_ON_SECS (3)
@@ -440,25 +440,25 @@ bool detected_non_residual(void){
 // need to fix a bit for both of these functions residual detected function
 // standard deviation and mean based method1
 bool detected_residual(void){
-    double x;double y;double z;
-    sample_accel(&x,&y,&z);
-    if (x > 0.0){
-        return false;
-    }
-    length = 0
-    if (counter < 100){
-        length = counter/2
-    }
-    values[counter] = (x*-1-values[]);
-    double median; double upper_iqr; double lower_iqr;
-    stats(&median,&upper_iqr,&lower_iqr);
-    if (x*-1 > upper_iqr || x*-1 < lower_iqr){
-        printf("OUTLIAR");
-        printf("\n upper %f\n",upper_iqr);
-        printf("\n lower %f\n",lower_iqr);
-        printf("\n value %f\n",x*-1);
-        return true;
-    }
+//    double x;double y;double z;
+//    sample_accel(&x,&y,&z);
+//    if (x > 0.0){
+//        return false;
+//    }
+//    int length = 0;
+//    if (counter < 100){
+//        length = counter/2;
+//    }
+//    values[counter] = (x*-1-values[]);
+//    double median; double upper_iqr; double lower_iqr;
+//    stats(&median,&upper_iqr,&lower_iqr);
+//    if (x*-1 > upper_iqr || x*-1 < lower_iqr){
+//        printf("OUTLIAR");
+//        printf("\n upper %f\n",upper_iqr);
+//        printf("\n lower %f\n",lower_iqr);
+//        printf("\n value %f\n",x*-1);
+//        return true;
+//    }
     return false;
 }
 // main detected funciton that will call the proper one
@@ -757,7 +757,7 @@ int main (void) {
         break;
       }
       case ON: {
-      	if (right_range > DIST_THRESHOLD)
+      	if (right_range > distance_threshold)
       	{
       		num_in_a_row_right += 1;
       	}
