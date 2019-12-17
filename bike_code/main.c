@@ -618,7 +618,8 @@ int main (void) {
     turn_light_color = (app_info & 0xC0) >> 6;
     brake_light_color = (app_info & 0x30) >> 4;
     proximity_dist = (app_info & 0xC) >> 2;
-    
+    printf("Turn color %d\n", turn_light_color);
+
     // set distance_threshold to proper value based on config
     if (proximity_dist == 0)
     {
@@ -637,7 +638,7 @@ int main (void) {
     float x_acc, y_acc, z_acc;
     sample_9250_accelerometer(&x_acc, &y_acc, &z_acc);
 	  // Add accelerometer sample
-    bool turned_left = (y_acc > TURN_DETECTED_ACCEL_THRESH), turned_right = (y_acc < -TURN_DETECTED_ACCEL_THRESH);
+    bool turned_left = (y_acc < -TURN_DETECTED_ACCEL_THRESH), turned_right = (y_acc > TURN_DETECTED_ACCEL_THRESH);
     // check if button pressed
     bool ble_left = false;
     bool ble_right = false;
