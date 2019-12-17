@@ -470,6 +470,16 @@ int main (void) {
   uint16_t num_in_a_row_left = 0;
   uint16_t num_in_a_row_right = 0;
 
+  /* brake_mode: 0 is ___, 1 is ____
+   * turn_light_color: 0 is __, 1 is ___, 2 is ____
+   * brake_light_color: 0 is __, 1 is ___, 2 is ___
+   * proximity_dist: 0 is ___ 1 is ____
+   */
+  uint8_t brake_mode = 0;
+  uint8_t turn_light_color = 0;
+  uint8_t brake_light_color = 0;
+  uint8_t proximity_dist = 0;
+
   // Loop forever
   while (1) {
     // Determines sampling rate
@@ -486,6 +496,7 @@ int main (void) {
     /************************************** TURNING **************************************/
     float x_acc, y_acc, z_acc;
     sample_9250_accelerometer(&x_acc, &y_acc, &z_acc);
+	// Add accelerometer sample
     bool turned_left = (y_acc > TURN_DETECTED_ACCEL_THRESH), turned_right = (y_acc < -TURN_DETECTED_ACCEL_THRESH);
     // check if button pressed
     bool ble_left = false;
@@ -503,13 +514,18 @@ int main (void) {
     }
 //    printf("timer: %i\n", button_press_time);
     bool left_turn, right_turn = false;
-    /************************************** TURNING **************************************/
+    /************************************** APP SETTINGS **********************************/
     uint8_t app_info = 0;
     sample_app();
     app_info = get_app_info();
-    printf("app info 0b%x\n", app_info);
 
-    /************************************** HALL EFFECT **************************************/
+	// Mask characteristic value to split into individual fields
+    turn_light_color = (app_info & 0xC0) >> 6;
+	brake_light_color = (app_info & 0x30) >> 4;
+	proximity_dist = (app_info & 0xC) >> 2;
+	brake_mode = (app_info & 0x3);
+
+	/************************************** HALL EFFECT **************************************/
     // TODO: Implement hall-effect sensors to update velocity
     // Used to check left_turn and right_turn (i.e. tilted left/right && velocity > 0);
     //printf("X: %f, Y: %f, Z: %f\n", x_acc, y_acc, z_acc);
