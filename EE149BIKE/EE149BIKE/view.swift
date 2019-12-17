@@ -17,10 +17,10 @@ import CoreBluetooth
 import UIKit
 
 class View: UIViewController,UITextFieldDelegate {
-    var brakeColor = "Yellow"
-    var turnColor = "Green"
-    var autoBrake = "1"
-    var dist = "2"
+    var brakeColor = 2
+    var turnColor = 2
+    var autoBrake = 1
+    var dist = 0
     
     @IBAction func doneSetting(_ sender: Any) {
         let temp = peripheralManager as! CBPeripheralManager?
@@ -37,25 +37,31 @@ class View: UIViewController,UITextFieldDelegate {
                                let characteristicUUID = CBUUID(string: "FFE1")
               let properties: CBCharacteristicProperties = [.read]
               let permissions: CBAttributePermissions = [.readable]
+              let val1 = String(turnColor,radix: 2)
+              let val2 = String(brakeColor,radix: 2)
+              let val3 = String(dist,radix: 2)
+              let val4 = String(autoBrake,radix: 2)
+              let serialized = "\(val1)\(val2)\(val3)\(val4)"
+              print(serialized)
                               let characteristic1 = CBMutableCharacteristic(
                                                   type: characteristicUUID,
                                                   properties: properties,
-                                                  value: Data(turnColor.utf8),
+                                                  value: Data(serialized.utf8),
                                                   permissions: permissions)
               let characteristic2 = CBMutableCharacteristic(
               type: characteristicUUID,
               properties: properties,
-              value: Data(brakeColor.utf8),
+              value: nil,
               permissions: permissions)
               let characteristic3 = CBMutableCharacteristic(
                        type: characteristicUUID,
                        properties: properties,
-                       value: Data(autoBrake.utf8),
+                       value: nil,
                        permissions: permissions)
               let characteristic4 = CBMutableCharacteristic(
               type: characteristicUUID,
               properties: properties,
-              value: Data(dist.utf8),
+              value: nil,
               permissions: permissions)
               service.characteristics = [characteristic1,characteristic2,characteristic3,characteristic4]
               temp!.add(service)
@@ -69,34 +75,34 @@ class View: UIViewController,UITextFieldDelegate {
     
     @IBAction func autoBrake(_ sender: UISegmentedControl  ) {
         if (sender.selectedSegmentIndex == 0) {
-            autoBrake = "0"
+            autoBrake = 0
         } else {
-            autoBrake = "1"
+            autoBrake = 1
         }
         print("Toggled Auto Brake")
     }
     @IBAction func yellowBrake(_ sender: Any) {
         print("yellowBrake")
-        brakeColor = "Yellow"
+        brakeColor = 2
     }
     @IBAction func redBrake(_ sender: Any) {
         print("redBrake")
-        brakeColor = "Red"
+        brakeColor = 1
     }
     @IBAction func blueBrake(_ sender: Any) {
         print("greenBrake")
-        brakeColor = "Green"
+        brakeColor = 0
     }
     @IBAction func blueTurn(_ sender: Any) {
-        turnColor = "Green"
+        turnColor = 0
     }
     
     @IBOutlet weak var myTextField: UITextField!
     @IBAction func redTurn(_ sender: Any) {
-        turnColor = "Red"
+        turnColor = 1
     }
     @IBAction func yellowTurn(_ sender: Any) {
-        turnColor = "Yellow"
+        turnColor = 2
     }
     var peripheralManager: CBManager?
 
@@ -114,7 +120,7 @@ class View: UIViewController,UITextFieldDelegate {
         if (textField.text!.count > 1){
             return true
         }
-        dist = textField.text!
+        dist = Int(textField.text!)!
           self.view.endEditing(true)
           return false
       }
