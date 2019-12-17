@@ -259,22 +259,30 @@ void sample_9250_accelerometer(float* x_axis, float* y_axis, float* z_axis) {
 // Inspired by simple_pwm example in nRF forums
 #define OUTPUT_PIN (26)
 static nrf_drv_pwm_t m_pwm0 = NRF_DRV_PWM_INSTANCE(0);
+static nrf_drv_pwm_t m_pwm1 = NRF_DRV_PWM_INSTANCE(1);
+
 // Declare different arrays which create several different colors
 nrf_pwm_values_individual_t red_values[] = {
     6,6,6,6,6,6,6,6,
-    13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,
-    100,100
+    6,6,6,6,6,6,6,6,
+    6,6,6,6,6,6,6,6,
 };
 nrf_pwm_values_individual_t green_values[] = {
    6,6,6,6,6,6,6,6,
     13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,
     100,100,
 };
-nrf_pwm_values_individual_t off_values[] = {
-13,13,13,13,13,13,13,13,
-13,13,13,13,13,13,13,13,
-13,13,13,13,13,13,13,13,
+nrf_pwm_values_individual_t yellow_values[] = {
+   6,6,6,6,6,6,6,6,
+     6,6,13,13,13,13,13,13,13,13,13,13,13,13,13,13,
+     100,100
 };
+nrf_pwm_values_individual_t off_values[] = {
+   13,13,13,13,13,13,13,13,
+     13,13,13,13,13,13,13,13,
+    13,13,13,13,13,13,13,13,
+};
+
 nrf_pwm_sequence_t const red_seq =
 {
     .values.p_individual = red_values,
@@ -307,10 +315,17 @@ void pwm_update_color(uint8_t color)
         nrf_drv_pwm_simple_playback(&m_pwm0, &red_seq, 1, NRF_DRV_PWM_FLAG_LOOP);
     } else if (color == 1){
         // We perform playback for green
-        nrf_drv_pwm_simple_playback(&m_pwm0, &green_seq, 10, NRF_DRV_PWM_FLAG_LOOP);
+        nrf_drv_pwm_simple_playback(&m_pwm0, &green_seq, 40, NRF_DRV_PWM_FLAG_STOP);
     } else {
         // We assume they want to play yellow
-        nrf_drv_pwm_simple_playback(&m_pwm0, &off_seq, 10, NRF_DRV_PWM_FLAG_LOOP);
+        nrf_drv_pwm_simple_playback(&m_pwm0, &green_seq, 40, NRF_DRV_PWM_FLAG_STOP);
+        nrf_drv_pwm_simple_playback(&m_pwm1, &green_seq, 40, NRF_DRV_PWM_FLAG_STOP);
+        nrf_delay_ms(1000);
+        nrf_drv_pwm_simple_playback(&m_pwm0, &off_seq, 40, NRF_DRV_PWM_FLAG_STOP);
+        nrf_drv_pwm_simple_playback(&m_pwm1, &off_seq, 40, NRF_DRV_PWM_FLAG_STOP);
+        nrf_delay_ms(1000);
+
+
     }
 }
 void pwm_init(void)
@@ -319,7 +334,8 @@ void pwm_init(void)
     {
         .output_pins =
         {
-            OUTPUT_PIN, 
+            OUTPUT_PIN,
+            
         },
         .base_clock   = NRF_PWM_CLK_16MHz,
         .count_mode   = NRF_PWM_MODE_UP,
@@ -328,6 +344,20 @@ void pwm_init(void)
         .step_mode    = NRF_PWM_STEP_AUTO
     };
     APP_ERROR_CHECK(nrf_drv_pwm_init(&m_pwm0, &config0, NULL));
+    nrf_drv_pwm_config_t const config1 =
+       {
+           .output_pins =
+           {
+               2,
+               
+           },
+           .base_clock   = NRF_PWM_CLK_16MHz,
+           .count_mode   = NRF_PWM_MODE_UP,
+           .top_value    = 21,
+           .load_mode    = NRF_PWM_LOAD_INDIVIDUAL,
+           .step_mode    = NRF_PWM_STEP_AUTO
+       };
+       APP_ERROR_CHECK(nrf_drv_pwm_init(&m_pwm1, &config1, NULL));
 }
 void led_init(void){
     NRF_CLOCK->TASKS_HFCLKSTART = 1; 
@@ -374,6 +404,31 @@ bool detected(void){
     }
     return false;
 }
+// need to fix a bit for both of these functions residual detected function
+// standard deviation and mean based method1
+/*bool detected(void){
+    double x;double y;double z;
+    sample_accel(&x,&y,&z);
+    if (x > 0.0){
+        return false;
+    }
+    length = 0
+    if (counter < 100){
+        length = counter/2
+ }
+    values[counter] = (x*-1-values[]);
+    double median; double upper_iqr; double lower_iqr;
+    stats(&median,&upper_iqr,&lower_iqr);
+    if (x*-1 > upper_iqr || x*-1 < lower_iqr){
+        printf("OUTLIAR");
+        printf("\n upper %f\n",upper_iqr);
+        printf("\n lower %f\n",lower_iqr);
+        printf("\n value %f\n",x*-1);
+        return true;
+    }
+    return false;
+}
+ */
 
 
 typedef enum {
