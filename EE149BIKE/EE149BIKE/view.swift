@@ -19,10 +19,10 @@ import MapKit
 import CoreLocation
 
 class View: UIViewController,UITextFieldDelegate {
-    var brakeColor = 2
-    var turnColor = 2
-    var autoBrake = 1
-    var dist = 0
+    var brakeColor = 1
+    var turnColor = 0
+    var autoBrake = 0
+    var dist = 2
     
     @IBOutlet weak var myMap: MKMapView!
     @IBAction func doneSetting(_ sender: Any) {
