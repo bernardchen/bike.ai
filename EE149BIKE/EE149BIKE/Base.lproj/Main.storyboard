@@ -183,12 +183,22 @@
                                                 <nil key="textColor"/>
                                                 <nil key="highlightedColor"/>
                                             </label>
+                                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="ZnZ-yd-SwD">
+                                                <rect key="frame" x="74" y="315" width="46" height="30"/>
+                                                <state key="normal" title="Done"/>
+                                                <connections>
+                                                    <action selector="doneSetting:" destination="3jR-sc-zjL" eventType="touchUpInside" id="BqX-DD-rop"/>
+                                                </connections>
+                                            </button>
                                         </subviews>
                                         <color key="backgroundColor" red="0.89180222600000003" green="0.054160686120000003" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                                         <constraints>
                                             <constraint firstItem="Ujb-fu-MT1" firstAttribute="leading" secondItem="AEK-Rq-Sy2" secondAttribute="leading" constant="10" id="29R-id-Kph"/>
                                             <constraint firstAttribute="bottom" secondItem="Bbt-Zg-PqU" secondAttribute="bottom" constant="164" id="7NG-Vr-AAG"/>
                                             <constraint firstItem="Ujb-fu-MT1" firstAttribute="centerX" secondItem="koo-t1-jEP" secondAttribute="centerX" id="9dw-b3-abo"/>
+                                            <constraint firstItem="ZnZ-yd-SwD" firstAttribute="top" secondItem="Bbt-Zg-PqU" secondAttribute="bottom" constant="80" id="BrZ-a8-OGh"/>
+                                            <constraint firstItem="ZnZ-yd-SwD" firstAttribute="leading" secondItem="AEK-Rq-Sy2" secondAttribute="leading" constant="74" id="DI2-a9-aNJ"/>
+                                            <constraint firstAttribute="trailing" secondItem="ZnZ-yd-SwD" secondAttribute="trailing" constant="74" id="IrD-Xa-3RY"/>
                                             <constraint firstItem="Bbt-Zg-PqU" firstAttribute="centerX" secondItem="YD6-8g-Qm1" secondAttribute="centerX" id="NSr-0k-L1q"/>
                                             <constraint firstAttribute="trailing" secondItem="Ujb-fu-MT1" secondAttribute="trailing" constant="9" id="OVX-iz-8Kz"/>
                                             <constraint firstItem="Ujb-fu-MT1" firstAttribute="top" secondItem="AEK-Rq-Sy2" secondAttribute="top" constant="160" id="YWU-bN-CRP"/>

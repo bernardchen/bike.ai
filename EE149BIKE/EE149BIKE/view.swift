@@ -21,6 +21,52 @@ class View: UIViewController,UITextFieldDelegate {
     var turnColor = "Green"
     var autoBrake = "1"
     var dist = "2"
+    
+    @IBAction func doneSetting(_ sender: Any) {
+        let temp = peripheralManager as! CBPeripheralManager?
+        temp?.removeAllServices()
+        if temp?.state != .poweredOn {
+            return
+        } else {
+        print("There is Power")
+             let temp = peripheralManager as! CBPeripheralManager?
+             let advertisementData = [CBAdvertisementDataLocalNameKey:
+                  "LIL"]
+              let serviceUUID = CBUUID(string: "FFE0")
+                               let service = CBMutableService(type: serviceUUID, primary: true)
+                               let characteristicUUID = CBUUID(string: "FFE1")
+              let properties: CBCharacteristicProperties = [.read]
+              let permissions: CBAttributePermissions = [.readable]
+                              let characteristic1 = CBMutableCharacteristic(
+                                                  type: characteristicUUID,
+                                                  properties: properties,
+                                                  value: Data(turnColor.utf8),
+                                                  permissions: permissions)
+              let characteristic2 = CBMutableCharacteristic(
+              type: characteristicUUID,
+              properties: properties,
+              value: Data(brakeColor.utf8),
+              permissions: permissions)
+              let characteristic3 = CBMutableCharacteristic(
+                       type: characteristicUUID,
+                       properties: properties,
+                       value: Data(autoBrake.utf8),
+                       permissions: permissions)
+              let characteristic4 = CBMutableCharacteristic(
+              type: characteristicUUID,
+              properties: properties,
+              value: Data(dist.utf8),
+              permissions: permissions)
+              service.characteristics = [characteristic1,characteristic2,characteristic3,characteristic4]
+              temp!.add(service)
+        temp!.startAdvertising(advertisementData)
+            let seconds = 1.0
+            DispatchQueue.main.asyncAfter(deadline: .now() + seconds) {
+                temp!.stopAdvertising()
+            }
+        }
+    }
+    
     @IBAction func autoBrake(_ sender: UISegmentedControl  ) {
         if (sender.selectedSegmentIndex == 0) {
             autoBrake = "0"
@@ -53,11 +99,15 @@ class View: UIViewController,UITextFieldDelegate {
         turnColor = "Yellow"
     }
     var peripheralManager: CBManager?
+
+
        override func viewDidLoad() {
            super.viewDidLoad()
         self.myTextField.delegate = self
 
         peripheralManager = CBPeripheralManager(delegate: self, queue: nil).self
+        let temp = peripheralManager as! CBPeripheralManager?
+                 
        
     }
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {
@@ -95,13 +145,10 @@ extension View : CBPeripheralManagerDelegate {
         case .unauthorized:
             print("No Auth")
         case .poweredOn:
-            print("There is Power")
-            let advertisementData = [CBAdvertisementDataLocalNameKey:
-                "LIL\(brakeColor)\(turnColor)\(autoBrake) , \(dist)"]
-            let temp = peripheralManager as! CBPeripheralManager?
-            temp!.startAdvertising(advertisementData)
+            print("Power")
         @unknown default:
             print("Default Case")
+                
         }
 
     }
