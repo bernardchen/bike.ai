@@ -102,28 +102,64 @@ class View: UIViewController,UITextFieldDelegate {
         }
         print("Toggled Auto Brake")
     }
-    @IBAction func yellowBrake(_ sender: Any) {
+    @IBAction func yellowBrake(_ sender: UIButton) {
         print("yellowBrake")
         brakeColor = 2
+        let seconds = 1.0
+        let temp = sender.backgroundColor
+        sender.backgroundColor = UIColor.gray
+        DispatchQueue.main.asyncAfter(deadline: .now() + seconds) {
+            sender.backgroundColor = temp
+                  }
     }
-    @IBAction func redBrake(_ sender: Any) {
+    @IBAction func redBrake(_ sender: UIButton) {
         print("redBrake")
         brakeColor = 1
+        let seconds = 1.0
+              let temp = sender.backgroundColor
+              sender.backgroundColor = UIColor.gray
+              DispatchQueue.main.asyncAfter(deadline: .now() + seconds) {
+                  sender.backgroundColor = temp
+                        }
     }
-    @IBAction func blueBrake(_ sender: Any) {
+    @IBAction func blueBrake(_ sender: UIButton) {
         print("greenBrake")
         brakeColor = 0
+        let seconds = 1.0
+              let temp = sender.backgroundColor
+              sender.backgroundColor = UIColor.gray
+              DispatchQueue.main.asyncAfter(deadline: .now() + seconds) {
+                  sender.backgroundColor = temp
+                        }
     }
-    @IBAction func blueTurn(_ sender: Any) {
+    @IBAction func blueTurn(_ sender: UIButton) {
         turnColor = 0
+        let seconds = 1.0
+                let temp = sender.backgroundColor
+                sender.backgroundColor = UIColor.gray
+                DispatchQueue.main.asyncAfter(deadline: .now() + seconds) {
+                    sender.backgroundColor = temp
+                          }
     }
     
     @IBOutlet weak var myTextField: UITextField!
-    @IBAction func redTurn(_ sender: Any) {
+    @IBAction func redTurn(_ sender: UIButton) {
         turnColor = 1
+        let seconds = 1.0
+                let temp = sender.backgroundColor
+                sender.backgroundColor = UIColor.gray
+                DispatchQueue.main.asyncAfter(deadline: .now() + seconds) {
+                    sender.backgroundColor = temp
+                          }
     }
-    @IBAction func yellowTurn(_ sender: Any) {
+    @IBAction func yellowTurn(_ sender: UIButton) {
         turnColor = 2
+        let seconds = 1.0
+                let temp = sender.backgroundColor
+                sender.backgroundColor = UIColor.gray
+                DispatchQueue.main.asyncAfter(deadline: .now() + seconds) {
+                    sender.backgroundColor = temp
+                          }
     }
     var peripheralManager: CBManager?
    // var locationManager = CLLocationManager()
@@ -139,13 +175,32 @@ class View: UIViewController,UITextFieldDelegate {
                  
        
     }
+    func textFieldShouldEndEditing(_ textField: UITextField) -> Bool {
+        if (textField.text!.count > 0){
+                   return true
+               }
+        return false
+    }
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+         print(2)
+             let textField = myTextField
+        if (textField?.text!.count ?? 0 > 0){
+            if Int(textField?.text! ?? "2") ?? 0 >= 2 {
+                textField!.text = "2"
+                     dist = 2
+            } else if(Int(textField!.text!) == 1){
+                     dist = 1
+            } else if (Int(textField?.text! ?? "2") == 0){
+                     dist = 0
+                 }else {
+                     dist = 2
+                 }
+             }
+        
+               self.view.endEditing(true)
+    }
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {
-        if (textField.text!.count > 1){
-            return true
-        }
-        dist = Int(textField.text!)!
-          self.view.endEditing(true)
-          return false
+        return true
       }
            
     func peripheralManagerDidStartAdvertising(error: NSError?)
