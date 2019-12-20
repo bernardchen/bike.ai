@@ -1,3 +1,5 @@
+// Wrappers for gpio created in EECS149 lab
+
 #include "gpio.h"
 
 gpio_register_t * regs = 0x50000504;
