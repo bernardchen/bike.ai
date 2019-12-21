@@ -59,10 +59,12 @@ uint16_t app_info_handle = 0;
 uint16_t app_num_handles = 0;
 
 // booleans representing whether or not left and right buttons have been pressed
-// main must call reset to say it has handled the button press
+// main must call reset_XXXX_button to say it has handled the button press
 bool left_is_pressed = false;
 bool right_is_pressed = false;
-// turn-green brake-red proximity-2meters mode-nonresidual
+
+// default values based on the defaul app_info value
+// turn-green, brake-red, proximity-2meters, mode-nonresidual
 // 00 01 10 00
 uint8_t app_info = 24;
 
@@ -442,7 +444,7 @@ uint8_t get_app_info(void)
 	return app_info;
 }
 
-// let's turn_ble.c know the button press has been read
+// lets turn_ble.c know the button press has been read
 void reset_left_button(void)
 {
     left_is_pressed = false;

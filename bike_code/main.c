@@ -87,7 +87,7 @@ nrf_saadc_value_t sample_value (uint8_t channel) {
   return val;
 }
 
-// BUCKER/nRF INITIALIZATION CODE
+/********************* BUCKER/nRF INITIALIZATION CODE *********************/
 
 void init_RTT() {
   ret_code_t error_code = NRF_SUCCESS;
@@ -213,21 +213,21 @@ static void lfclk_request(void)
 /***** SHOULD BE CALLED AT THE VERY START OF MAIN SO EVERYTHING INVOLVING app_timer IS SET UP *****/
 static void set_up_app_timer(void)
 {
-  lfclk_request();
+  lfclk_request(); // need to call this to make the oscillator start so timers actually work
   ret_code_t error_code = app_timer_init();
   APP_ERROR_CHECK(error_code);
 }
 
 // timer stuff for timeout
-// Callback function for timer
 uint32_t turn_time_on = 0; // turn_time_on used for turn signal state machine
-uint32_t button_press_time = 0;
+uint32_t button_press_time = 0; // to make sure a single button press is not registered twice
 uint32_t brake_time_on = 0; // brake_time_on used for brake state machine
-bool light_toggle = true;
-bool pwm_set = false;
+bool light_toggle = true; // used to make turn lights blink
+bool pwm_set = false; // PWMs need to only be set once, so this bool will keep track of that
 uint8_t millisec_counter = 0; // to count to four to make sure other counters only change on the second
+// Callback function for timer
 void main_timer_callback() {
-  if (millisec_counter == 3)
+  if (millisec_counter == 3) // 0 indexed
   {
     millisec_counter = 0;
     turn_time_on++;
@@ -238,13 +238,13 @@ void main_timer_callback() {
   {
     millisec_counter++;
   }
-  light_toggle = !light_toggle;
-  pwm_set = true;
+  light_toggle = !light_toggle; // makes it so blinks at a rate of a change every 250ms
+  pwm_set = true; // says that pwm needs to be set
 }
 
 void init_main_timer() {
   app_timer_create(&main_timer, APP_TIMER_MODE_REPEATED, (app_timer_timeout_handler_t) main_timer_callback);
-  app_timer_start(main_timer, APP_TIMER_TICKS(250), NULL); // 1000 milliseconds
+  app_timer_start(main_timer, APP_TIMER_TICKS(250), NULL); // 250 milliseconds
   printf("Timer initialized\n");
 }
 
@@ -253,6 +253,7 @@ void init_button0() {
 }
 
 
+/********************* Sample values from the accelerometers *********************/
 void sample_accel(double* x_acc, double* y_acc, double* z_acc) {
   nrf_saadc_value_t x_val = sample_value(X_CHANNEL);
   nrf_saadc_value_t y_val = sample_value(Y_CHANNEL);
@@ -277,7 +278,7 @@ void sample_9250_accelerometer(float* x_axis, float* y_axis, float* z_axis) {
 
 
 
-/************************* PWM Stuff for the buggy LEDs *************************/
+/************************* PWM configurations for LEDs *************************/
 // Inspired by simple_pwm example in nRF forums
 static nrf_drv_pwm_t m_pwm0 = NRF_DRV_PWM_INSTANCE(0);
 static nrf_drv_pwm_t m_pwm1 = NRF_DRV_PWM_INSTANCE(1);
@@ -305,6 +306,7 @@ nrf_pwm_values_individual_t off_values[] = {
     13,13,13,13,13,13,13,13,
 };
 
+// create actual data types needed for pwm to work
 nrf_pwm_sequence_t const red_seq =
 {
     .values.p_individual = red_values,
@@ -335,7 +337,7 @@ nrf_pwm_sequence_t const off_seq =
     .end_delay       = 0
 };
 
-
+// Initializes the pwm. DON'T CALL. Will be handled by led_init.
 void pwm_init(void)
 {
     nrf_drv_pwm_config_t const config0 =
@@ -343,7 +345,6 @@ void pwm_init(void)
         .output_pins =
         {
             OUTPUT_PIN_BRAKE,
-            
         },
         .base_clock   = NRF_PWM_CLK_16MHz,
         .count_mode   = NRF_PWM_MODE_UP,
@@ -381,12 +382,15 @@ void pwm_init(void)
     };
     APP_ERROR_CHECK(nrf_drv_pwm_init(&m_pwm2, &config2, NULL));
 }
+
+// The function to call to initialize LEDs and everything related (like pwm)
 void led_init(void){
     NRF_CLOCK->TASKS_HFCLKSTART = 1; 
     while(NRF_CLOCK->EVENTS_HFCLKSTARTED == 0) 
         ;
     pwm_init();
 }
+
 
 /************************* Brake detection *************************/
 double values[SAMPLE_SIZE];
@@ -451,7 +455,8 @@ bool detected_residual(void){
     }
     return false;
 }
-// main detected funciton that will call the proper one
+
+// main detected function that will call the proper one
 // based on configured mode
 // if is_residual is 1, calls that one
 // otherwise, calls non-residual
@@ -532,10 +537,8 @@ void turn_on_right_lights(uint8_t brake_color)
 // make turn lights flash
 void turn_left_blink(uint8_t color)
 {
-    if (pwm_set)
-    {
-
-    
+  if (pwm_set)
+  { 
     if (light_toggle)
     {
       turn_on_left_lights(color);
@@ -545,14 +548,12 @@ void turn_left_blink(uint8_t color)
       turn_off_left_lights();
     }
     pwm_set = false;
-    }   
+  }   
 }
 void turn_right_blink(uint8_t color)
 {
-    if (pwm_set)
-    {
-
-    
+  if (pwm_set)
+  {
     if (light_toggle)
     {
       turn_on_right_lights(color);
@@ -562,10 +563,10 @@ void turn_right_blink(uint8_t color)
       turn_off_right_lights();
     }
     pwm_set = false;
-
-    }
+  }
 }
 
+// States for each of the three sub-state machines (brake light, turn light, proximity light)
 typedef enum {
   RIGHT,
   LEFT,
@@ -591,9 +592,7 @@ int main (void) {
   ble_init();
   /********* ultrasonic ranger stuff *********/
   init_ultrasonic_ranger(A, D, 1);
-  // LEDs for output of something nearby
-  // TODO: CHANGE WHEN HAVE REAL LEDs
-  // nrf_gpio_cfg_output(BUCKLER_LED0);
+
   printf("Buckler initialized!\n");
 
   // State machines
@@ -608,24 +607,24 @@ int main (void) {
   long right_range = 0;
   long distance_threshold = 200; // represents distance in centimeters
 
-  // variable just for proximity sensor so that false reads don't change 
+  // variable just for proximity sensor so that false reads don't change the state
   uint16_t num_in_a_row_left = 0;
   uint16_t num_in_a_row_right = 0;
 
+  // Used for configurations set by the iOS app
   /* brake_mode: 0 is NON-RESIDUAL, 1 is RESIDUAL
    * turn_light_color: 0 is GREEN, 1 is RED, 2 is YELLOW
    * brake_light_color: 0 is GREEN, 1 is RED, 2 is YELLOW
    * proximity_dist: 0 is ZERO METERS, 1 is ONE METER, 2 is TWO METERS
    */
-  uint8_t brake_mode = 0;
-  uint8_t turn_light_color = 0;
-  uint8_t brake_light_color = 1;
-  uint8_t proximity_dist = 2;
+  uint8_t brake_mode = 0; // non-residual
+  uint8_t turn_light_color = 0; // green
+  uint8_t brake_light_color = 1; // red
+  uint8_t proximity_dist = 2; // 200 cm
 
   // Loop forever
   while (1) {
     // Determines sampling rate
-    // TODO: Figure out how to to dealsy because ultrasonic_ranger can't delay more than 1ms
   	nrf_delay_ms(1);
 
     for (int i=0; i<3; i++) {
@@ -726,6 +725,7 @@ int main (void) {
 
     // State machine for proximity sensors
     // will only change if there are LOOP_HOLD_AMOUNT times in a row
+    // machine for left side
     switch(left_proximity_state) {
       case OFF: {
       	if (left_range <= 250)
@@ -738,7 +738,7 @@ int main (void) {
       		num_in_a_row_left = 0;
       	}
 
-      	if (num_in_a_row_left >= LOOP_HOLD_AMOUNT && left_range <= distance_threshold) // already happened 4 times and fifth is also true
+      	if (num_in_a_row_left >= LOOP_HOLD_AMOUNT && left_range <= distance_threshold) // already happened 9 times and tenth is also true
       	{
       		num_in_a_row_left = 0;
       		left_proximity_state = ON;
@@ -764,6 +764,7 @@ int main (void) {
         break;
       }
     }
+    // machine for right side
     switch(right_proximity_state) {
       case OFF: {
       	if (right_range <= 250)
@@ -867,6 +868,7 @@ int main (void) {
       }
     }
 
+    // turn on the corresponding LEDs if in a turning state
     if (left_turn)
     {
       turn_left_blink(turn_light_color);

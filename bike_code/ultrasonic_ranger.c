@@ -1,7 +1,7 @@
 // Wrapper for the Grove Ultrasonic Ranger
 //
 // Uses a state machine to step through the process 
-// presented gy Grove to read the distance.
+// presented by Grove to read the distance.
 // Example codes can be seen on the official website:
 // http://wiki.seeedstudio.com/Grove-Ultrasonic_Ranger/
 
@@ -37,13 +37,13 @@ uint32_t current_pin_num = 0; // the pin that is currently being used to poll
 							// this timeout gives about max 200cm
 
 // gets called when timer runs out and doesn't transition states as expected.
-// will move to switch_to_output
+// will move to error state and return a default range of 600
 static void ranger_timeout_handler(void * p_context)
 {
 	// if timer actually times out, then we reset and go back to output mode
 	// and then return from the function
 	ranger_state = ERROR;
-	// also set range to 0
+	// also set range to 600 to say no object is nearby
 	range = 600;
 }
 
@@ -57,7 +57,7 @@ void ranger_timer_init()
     // Create timers
   err_code = app_timer_create(&ranger_timer,
                                 APP_TIMER_MODE_SINGLE_SHOT,
-                                ranger_timeout_handler); // don't do anything to avoid interrupts
+                                ranger_timeout_handler);
   APP_ERROR_CHECK(err_code);
   printf("Ultrasonic Ranger timer created!\n");
 }
@@ -70,7 +70,7 @@ uint32_t app_timer_ticks_to_usec(uint32_t ticks)
                   (uint64_t)APP_TIMER_CLOCK_FREQ));
 }
 
-/**** timer wrapper functions ****/
+/************* TIMER HELPER FUNCS *************/
 void ranger_timer_start()
 {
   ret_code_t error_code = app_timer_start(ranger_timer, APP_TIMER_TICKS(RANGER_TIMEOUT), NULL);
@@ -87,6 +87,7 @@ uint32_t ranger_get_time_usec()
 {
 	// in the case of overflow
 	uint32_t curr_rtc_val = app_timer_cnt_get();
+	// in the case of overflow, need special calculation to count the time
 	if (curr_rtc_val < timer_start_rtc)
 	{
 		return app_timer_ticks_to_usec((APP_TIMER_MAX_CNT_VAL - timer_start_rtc) + curr_rtc_val);
@@ -125,8 +126,11 @@ uint32_t ranger_get_input()
 }
 
 
-// Call the function to initialize the ultrasonic ranger
-// port is whether the A or D port on the buckler is being used
+// Call the function to initialize the ultrasonic ranger.
+// Input:
+// left_port is the port for the left ultrasonic ranger
+// right_port is the port for the right ultrasonic ranger
+	// use the UNUSED enum if the ranger is not b eing used
 // initLEDs is whether or not to init the hardcoded LEDs too
 	// 0 is don't init, any other value is
 void init_ultrasonic_ranger(buckler_port_t left_port, buckler_port_t right_port, uint32_t initLEDs)
@@ -136,7 +140,8 @@ void init_ultrasonic_ranger(buckler_port_t left_port, buckler_port_t right_port,
 		init_proxi_leds();
 	}
 
-	// A1/D1 is not used by this sensor
+	// A1/D1 is not used by this sensor so is open
+	// initializes the rangers if they exist
 	left_ranger_port = left_port;
 	switch (left_ranger_port)
 	{
@@ -178,19 +183,20 @@ void init_ultrasonic_ranger(buckler_port_t left_port, buckler_port_t right_port,
 	}
 
 
-	// set left to output
+	// set left to output if it exists
 	if (left_ranger_port_pin_num != 0)
 	{
 		current_pin_num = left_ranger_port_pin_num;
 		set_ranger_to_output();
 	}
-	// set right to output
+	// set right to output if it exists
 	if (right_ranger_port_pin_num != 0)
 	{
 		current_pin_num = right_ranger_port_pin_num;
 		set_ranger_to_output();
 	}
 
+	// start the timer
 	ranger_timer_init();
 }
 
@@ -200,6 +206,7 @@ void init_ultrasonic_ranger(buckler_port_t left_port, buckler_port_t right_port,
 // use 1 for left, 0 for right
 long ultrasonic_ranger_get_distance_cm(uint32_t isLeft)
 {
+	// if the corresponding side's timer exists, set that to current
 	if (isLeft == 1 && left_ranger_port_pin_num != 0)
 	{
 		current_pin_num = left_ranger_port_pin_num;
@@ -210,11 +217,12 @@ long ultrasonic_ranger_get_distance_cm(uint32_t isLeft)
 	}
 	else
 	{
+		// means the timer we doesn't exist, so don't do anything
 		current_pin_num = 0;
 		range = 600;
 	}
-	// get timer value
 
+	// get timer value if ranger exists
 	if (current_pin_num != 0)
 	{
 		bool continue_loop = true;
@@ -344,7 +352,7 @@ long ultrasonic_get_right_distance_cm()
 
 /************ PROXIMITY WARNING LED WRAPPERS ************/
 // welcome to macro hell (nested macros)
-// reusing the buckler ios
+// reusing the buckler IOs
 #define RIGHT_PROXI_LED BUCKLER_LCD_MISO // pin 16
 #define LEFT_PROXI_LED BUCKLER_LCD_CS // pin 18
 
