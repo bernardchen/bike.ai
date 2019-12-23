@@ -57,7 +57,9 @@ The final report for our project can be found under `/PDFs/final_report.pdf`. It
 ## Contributors
 
 Bernard Chen
+
 Arjun Mishra
+
 Michael Duong
 
 ## References
